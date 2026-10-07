@@ -1,0 +1,6 @@
+docker-compose.yml
+Dockerfile
+.dockerignore
+.env
+__pycache__
+listener.py
