@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import Member, Status, User, Reaction, Message
+from discord import Member, Status, User, Reaction, Message, Embed
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -16,8 +16,7 @@ class Leveller(commands.Cog):
     self.bot = bot
     self.users = mongo.database.users
     self.vc = mongo.database.vc
-    self.admin = mongo.database.admin
-    self.roles = [(1, 1134948712980947024), (2, 1184378443249504276), (3, 1267953974791766076), (4, 1190584957895200878)]
+    self.config = mongo.database.config
 
   @commands.Cog.listener()
   async def on_ready(self):
@@ -28,6 +27,16 @@ class Leveller(commands.Cog):
         continue
       await self.refresh_channel(channel)
     await self.update_database()
+
+  async def update_database(self):
+    self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
+    self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
+    self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
+    self.VC_CONCURRENT_MEMBERS = int((self.config.find_one({"setting": "vc_concurrent_members"}))["value"].get("value", 2))
+    self.roles = [(int(doc["value"]["threshold"]),doc["value"]["role_id"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles.sort(key=lambda t: t[0])
+
+
 
   @commands.Cog.listener()
   async def on_message(self, message):
@@ -46,7 +55,7 @@ class Leveller(commands.Cog):
       return
 
     if doc.get("last_msg_date"):
-      if now - doc.get("last_msg_date") < timedelta(seconds=15):
+      if now - doc.get("last_msg_date") < timedelta(seconds=self.TIME_INCREMENT):
         return
 
     self.users.update_one(
@@ -56,10 +65,18 @@ class Leveller(commands.Cog):
     )
 
     amount = await self.calculate(message)
-    await self.award(message.author.id, amount, "text")
+    await self.internal_award(recipient=message.author.id, amount=amount, type="text")
 
-  @commands.command()
-  async def award(self, recipient: int, amount: int = 0, type: str = "text"):
+
+# -----------------
+# -----------------
+# --- INTERNALS ---
+# -----------------
+# -----------------
+
+  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
+    if recipient == 0:
+      return
     doc = self.users.find_one({"_id": recipient})
 
     if type == "text":
@@ -98,9 +115,10 @@ class Leveller(commands.Cog):
 
     prev_level = doc.get("level")
     if prev_level != current_level:
-      self.collection.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
+      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
       if prev_level is not None and current_level > prev_level:
         try:
+          # add code here to customize message delivered if reward has been reached
           await user.send(f"Congratulations **{user.nick}**, you just advanced to **level {current_level}**!")
         except discord.Forbidden:
           pass
@@ -113,11 +131,106 @@ class Leveller(commands.Cog):
           role = await self.guild.fetch_role(role_id)
         await user.add_roles(role)
 
-  async def update_database():
-    self.TIME_INCREMENT = self.admin.config.find_one({"_id": "time_increment"}).get("value", 15)
-    self.TEXT_AWARD = self.admin.config.find_one({"_id": "text_award"}).get("value", 4.5)
-    self.VOICE_AWARD = self.admin.config.find_one({"_id": "voice_award"}).get("value", 6)
-    self.VC_CONCURRENT_MEMBERS = self.admin.config.find_one({"_id": "vc_concurrent_members"}).get("value", 2)
+  def exp_for_level(self, level):
+    if level <= 0:
+      return 0
+    prev = level - 1
+    return 5 * prev**2 + 50 * prev + 100 + 1
+
+# ------------------
+# ------------------
+# ---- COMMANDS ----
+# ------------------
+# ------------------
+
+  @commands.command()
+  async def level(self, ctx: commands.Context, option: int|User|Member|str = 0):
+    if  option == "up":
+      doc = self.users.find_one({"_id": ctx.author.id})
+      if doc:
+        await self.check(doc)
+        await ctx.send("Successfully counted every last experience point and awarded you with the associated roles.")
+      return
+
+    if option == 0:
+      id = ctx.author.id
+    elif isinstance(option, User) or isinstance(option, Member):
+      id = option.id
+    else:
+      id = option
+
+    try:
+      user = await self.guild.fetch_member(id)
+    except discord.NotFound:
+      user = None
+    except discord.HTTPException:
+      user = None
+
+    if not id or not user:
+      await ctx.send(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!")
+      return
+
+    doc = self.users.find_one({"_id": id})
+    if not doc:
+      await ctx.send(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!")
+      return
+
+    current_level = doc.get("level", 0)
+    current_exp = doc.get("text", 0) + doc.get("voice", 0)
+    embed = Embed(title=f'Counting EXP for {user.nick}', color=user.accent_color)
+    embed.add_field(name='Text EXP', value=doc.get("text", 0), inline=True)
+    embed.add_field(name='Voice EXP', value=doc.get("voice", 0), inline=True)
+    embed.add_field(name='Total EXP', value=current_exp, inline=True)
+    embed.add_field(name='Level', value=current_level, inline=True)
+
+    next_exp = self.exp_for_level(1 + doc.get("level", 0))
+    progress = current_exp / next_exp * 100
+    embed.add_field(name='Progress', value=f'{current_exp} / {next_exp} ({progress:.1f}%)', inline=True)
+    embed.add_field(name='Next Role', value=next((f'<@&{r}>' for t, r in self.roles if t > current_level), 'None!'), inline=True)
+
+    await ctx.send(embed=embed)
+
+
+
+  @commands.command()
+  async def leaderboard(self, ctx, range: str = "10"):
+    low, sep, high = range.partition("-")
+    try:
+      if sep:
+        start, finish = int(low), int(high)
+      else:
+        start, finish = 1, int(low)
+    except ValueError:
+      await ctx.send("Usage: `!leaderboard 10` or `!leaderboard 50-100`")
+      return
+
+    if start < 1 or finish <= start or finish - start + 1 > 50:
+      await ctx.send(f"Range must be valid and at most FIFTY results at a time. No more!")
+      return
+
+    skip = start - 1
+    limit = finish - start + 1
+    pipeline = [
+      {"$addFields": {
+        "total_exp": {"$add": [
+          {"$ifNull": ["$text", 0]},
+          {"$ifNull": ["$voice", 0]},
+        ]}
+      }},
+      {"$sort": {"total_exp": -1}},
+      {"$skip": skip},
+      {"$limit": limit},
+    ]
+
+    description = "\n".join(
+      f'{rank}. <@{doc["_id"]}>: Level `{doc.get("level", 0)}` '
+      f'w/ **{doc.get("text", 0) + doc.get("voice", 0)}** Total EXP '
+      f'(**{doc.get("text", 0)}** Text / **{doc.get("voice", 0)}** Voice)'
+      for rank, doc in enumerate(self.users.aggregate(pipeline), start=start)
+    )
+    embed = Embed(title="Leaderboard", description=description, color=0xA9BFBE)
+    await ctx.send(embed=embed)
+
 
 # ****************
 # ****************
@@ -135,7 +248,7 @@ class Leveller(commands.Cog):
   async def end_segment(self, member_id):
     doc = self.vc.find_one_and_delete({"_id": member_id})
     if doc:
-      await self.award(member_id, calculate(timedelta=(datetime.now(timezone.utc) - doc["joined"])), "voice")
+      await self.internal_award(member_id, calculate(timedelta=(datetime.now(timezone.utc) - doc["joined"])), "voice")
 
   async def refresh_channel(self, channel):
     members = [m for m in channel.members if not m.bot]
