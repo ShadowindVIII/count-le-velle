@@ -28,7 +28,7 @@ class Leveller(commands.Cog):
       await self.refresh_channel(channel)
     await self.update_database()
 
-  async def update_database(self):
+  def update_database(self):
     self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
     self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
     self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
@@ -139,6 +139,27 @@ class Leveller(commands.Cog):
     prev = level - 1
     return 5 * prev**2 + 50 * prev + 100 + 1
 
+  @commands.command()
+  async def wear(self, ctx: commands.Context, role_name: str):
+    role = discord.utils.get(self.guild.roles, name="role_name")
+    match = next((t for t in self.roles if t[1] == role.id), None)
+    if not match:
+      await ctx.send("After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".")
+      return
+
+    doc = self.users.find_one({"_id": ctx.author.id})
+    if not doc:
+      self.users.insert_one({"_id": ctx.author.id})
+      return
+
+    accessbile = [t for t in self.roles if t[0] <= doc.get("level", 0)]
+    if accessible:
+      if role in accessible:
+       if role in member.roles:
+         await member.remove_roles(role)
+       else:
+         await member.add_roles(role)
+
 # ------------------
 # ------------------
 # ---- COMMANDS ----
@@ -186,9 +207,9 @@ class Leveller(commands.Cog):
     embed.add_field(name='Level', value=current_level, inline=True)
 
     old_exp = self.exp_for_level(doc.get("level", 0))
-    next_exp = self.exp_for_level(1 + doc.get("level", 0)) - old_exp
-    progress = (current_exp - old_exp) / next_exp * 100
-    embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp} ({progress:.1f}%)', inline=True)
+    next_exp = self.exp_for_level(1 + doc.get("level", 0))
+    progress = (current_exp - old_exp) / (next_exp - old_exp) * 100
+    embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
     embed.add_field(name='Next Role', value=next((f'<@&{r}>' for t, r, m in self.roles if t > current_level), 'None!'), inline=True)
 
     embed.set_footer(text="TIP: Commands do not grant experience points.")

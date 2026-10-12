@@ -193,4 +193,29 @@ class Admin(commands.Cog):
       )
 
     await self.check(new_doc)
+    await ctx.send(content=f"Successfully added **{amount}** to <@{recipient}>'s **{type}** experience.",allowed_mentions=discord.AllowedMentions.none())
+
+  @commands.command()
+  @commands.has_role(ADMIN_ROLE_ID)
+  async def set(self, ctx: commands.Context, recipient: int = 0, amount: int = 0, type: str = "text"):
+    if recipient == 0:
+      return
+    doc = self.users.find_one({"_id": recipient})
+
+    if type == "text":
+      new_doc = self.users.find_one_and_update(
+        {"_id": recipient},
+        {"$set": {"text": amount}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER
+      )
+    if type == "voice":
+      new_doc = self.users.find_one_and_update(
+        {"_id": recipient},
+        {"$set": {"voice": amount}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER
+      )
+
+    await self.check(new_doc)
     await ctx.send(content=f"Successfully updated <@{recipient}>'s **{type}** experience to **{amount}**.",allowed_mentions=discord.AllowedMentions.none())
