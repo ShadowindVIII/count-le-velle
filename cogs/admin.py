@@ -7,6 +7,7 @@ import dotenv
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from pymongo import ReturnDocument
 
 ADMIN_ROLE_ID = int(os.environ["ADMIN_ROLE_ID"])
 
@@ -14,6 +15,11 @@ class Admin(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
     self.bot = bot
     self.database = mongo.database
+    self.users = mongo.database.users
+
+  @commands.Cog.listener()
+  async def on_ready(self):
+    self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"]))
 
   @commands.command()
   @commands.guild_only()
@@ -129,6 +135,19 @@ class Admin(commands.Cog):
           return_value = value_string.strip("'")
     return return_value
 
+  def split_dict(self, dict_string: str):
+    bracket_count = 0
+    splices = [0]
+    for i in range(len(dict_string)):
+      if dict_string[i] == '{' or dict_string[i] == '[':
+        bracket_count += 1
+      elif dict_string[i] == '}' or dict_string[i] == ']':
+        bracket_count -= 1
+      elif dict_string[i] == ',' and bracket_count == 0:
+        splices.append(i)
+    splices.append(len(dict_string))
+    return [dict_string[splices[i]:splices[i+1]].strip(",").strip() for i in range(len(splices)-1)]
+
   def refresh_databases(self):
     for cog in self.bot.cogs.values():
       try:
@@ -136,6 +155,21 @@ class Admin(commands.Cog):
       except AttributeError:
         pass
 
+  async def check(self, doc):
+    user = await self.guild.fetch_member(doc["_id"])
+    total_exp = doc.get("text", 0) + doc.get("voice", 0)
+
+    level = 0
+    cutoff_exp = 0
+    while cutoff_exp < total_exp:
+      cutoff_exp = 5 * level**2 + 50 * level + 100
+      level += 1
+    current_level = level - 1
+
+    prev_level = doc.get("level")
+    if prev_level != current_level:
+      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
+  
   @commands.command()
   @commands.has_role(ADMIN_ROLE_ID)
   async def award(self, ctx: commands.Context, recipient: int = 0, amount: int = 0, type: str = "text"):

@@ -33,9 +33,9 @@ class Leveller(commands.Cog):
     self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
     self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
     self.VC_CONCURRENT_MEMBERS = int((self.config.find_one({"setting": "vc_concurrent_members"}))["value"].get("value", 2))
-    self.roles = [(int(doc["value"]["threshold"]),doc["value"]["role_id"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
-
+    self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
 
 
   @commands.Cog.listener()
@@ -46,6 +46,8 @@ class Leveller(commands.Cog):
       if message.content.startswith(self.bot.command_prefix):
         return
     elif not message.attachments:
+      return
+    if any(a.id in self.immune_roles for a in message.author.roles):
       return
 
     now = datetime.now(timezone.utc)
@@ -118,18 +120,18 @@ class Leveller(commands.Cog):
       self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
       if prev_level is not None and current_level > prev_level:
         try:
-          # add code here to customize message delivered if reward has been reached
           await user.send(f"Congratulations **{user.nick}**, you just advanced to **level {current_level}**!")
         except discord.Forbidden:
           pass
 
     user_role_list = [role.id for role in user.roles]
-    for threshold, role_id in self.roles:
+    for threshold, role_id, message in self.roles:
       if current_level >= threshold and role_id not in user_role_list:
         role = self.guild.get_role(role_id)
         if not role:
           role = await self.guild.fetch_role(role_id)
         await user.add_roles(role)
+        await user.send(message.strip("\""))
 
   def exp_for_level(self, level):
     if level <= 0:
@@ -183,11 +185,13 @@ class Leveller(commands.Cog):
     embed.add_field(name='Total EXP', value=current_exp, inline=True)
     embed.add_field(name='Level', value=current_level, inline=True)
 
-    next_exp = self.exp_for_level(1 + doc.get("level", 0))
-    progress = current_exp / next_exp * 100
-    embed.add_field(name='Progress', value=f'{current_exp} / {next_exp} ({progress:.1f}%)', inline=True)
-    embed.add_field(name='Next Role', value=next((f'<@&{r}>' for t, r in self.roles if t > current_level), 'None!'), inline=True)
+    old_exp = self.exp_for_level(doc.get("level", 0))
+    next_exp = self.exp_for_level(1 + doc.get("level", 0)) - old_exp
+    progress = (current_exp - old_exp) / next_exp * 100
+    embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp} ({progress:.1f}%)', inline=True)
+    embed.add_field(name='Next Role', value=next((f'<@&{r}>' for t, r, m in self.roles if t > current_level), 'None!'), inline=True)
 
+    embed.set_footer(text="TIP: Commands do not grant experience points.")
     await ctx.send(embed=embed)
 
 
@@ -205,7 +209,7 @@ class Leveller(commands.Cog):
       return
 
     if start < 1 or finish <= start or finish - start + 1 > 50:
-      await ctx.send(f"Range must be valid and at most FIFTY results at a time. No more!")
+      await ctx.send(f"You cannot possibly expect me to count through such a range. Range must be valid (e.g. `10-25` and at most FIFTY results at a time. No more!")
       return
 
     skip = start - 1
@@ -255,6 +259,7 @@ class Leveller(commands.Cog):
     big_enough = len(members) >= self.VC_CONCURRENT_MEMBERS
     for m in members:
       deaf = m.voice.self_deaf or m.voice.deaf
+      skip = any(a.id in self.immune_roles for a in message.author.roles)
       if big_enough and not deaf:
         await self.start_segment(m.id)
       else:
