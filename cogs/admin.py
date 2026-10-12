@@ -171,6 +171,7 @@ class Admin(commands.Cog):
       self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
   
   @commands.command()
+  @commands.guild_only()
   @commands.has_role(ADMIN_ROLE_ID)
   async def award(self, ctx: commands.Context, recipient: int = 0, amount: int = 0, type: str = "text"):
     if recipient == 0:
@@ -196,6 +197,7 @@ class Admin(commands.Cog):
     await ctx.send(content=f"Successfully added **{amount}** to <@{recipient}>'s **{type}** experience.",allowed_mentions=discord.AllowedMentions.none())
 
   @commands.command()
+  @commands.guild_only()
   @commands.has_role(ADMIN_ROLE_ID)
   async def set(self, ctx: commands.Context, recipient: int = 0, amount: int = 0, type: str = "text"):
     if recipient == 0:
@@ -219,3 +221,5 @@ class Admin(commands.Cog):
 
     await self.check(new_doc)
     await ctx.send(content=f"Successfully updated <@{recipient}>'s **{type}** experience to **{amount}**.",allowed_mentions=discord.AllowedMentions.none())
+
+

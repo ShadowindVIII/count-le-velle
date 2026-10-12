@@ -43,6 +43,8 @@ class Leveller(commands.Cog):
 
   @commands.Cog.listener()
   async def on_message(self, message):
+    if isinstance(message.channel, discord.DMChannel):
+      return
     if message.author.bot:
       return
     if message.content:
@@ -143,6 +145,7 @@ class Leveller(commands.Cog):
     return 5 * prev**2 + 50 * prev + 100 + 1
 
   @commands.command()
+  @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def wear(self, ctx: commands.Context, role_name: str):
     role = discord.utils.get(self.guild.roles, name="role_name")
@@ -171,6 +174,7 @@ class Leveller(commands.Cog):
 # ------------------
 
   @commands.command()
+  @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def level(self, ctx: commands.Context, option: int|User|Member|str = 0):
     if  option == "up":
@@ -223,6 +227,7 @@ class Leveller(commands.Cog):
 
 
   @commands.command()
+  @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def leaderboard(self, ctx, range: str = "10"):
     low, sep, high = range.partition("-")
