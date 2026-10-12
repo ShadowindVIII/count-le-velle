@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 import os
 import dotenv
+COMMAND_COOLDOWN = os.environ['COMMAND_COOLDOWN']
 
 class Leveller(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
@@ -26,7 +27,7 @@ class Leveller(commands.Cog):
       if not isinstance(channel, discord.VoiceChannel):
         continue
       await self.refresh_channel(channel)
-    await self.update_database()
+    self.update_database()
 
   def update_database(self):
     self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
@@ -142,6 +143,7 @@ class Leveller(commands.Cog):
     return 5 * prev**2 + 50 * prev + 100 + 1
 
   @commands.command()
+  @commands.cooldown(1, COMMAND_COOLDOWN)
   async def wear(self, ctx: commands.Context, role_name: str):
     role = discord.utils.get(self.guild.roles, name="role_name")
     match = next((t for t in self.roles if t[1] == role.id), None)
@@ -169,6 +171,7 @@ class Leveller(commands.Cog):
 # ------------------
 
   @commands.command()
+  @commands.cooldown(1, COMMAND_COOLDOWN)
   async def level(self, ctx: commands.Context, option: int|User|Member|str = 0):
     if  option == "up":
       doc = self.users.find_one({"_id": ctx.author.id})
@@ -220,6 +223,7 @@ class Leveller(commands.Cog):
 
 
   @commands.command()
+  @commands.cooldown(1, COMMAND_COOLDOWN)
   async def leaderboard(self, ctx, range: str = "10"):
     low, sep, high = range.partition("-")
     try:
