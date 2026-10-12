@@ -36,6 +36,8 @@ class Leveller(commands.Cog):
     self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
+    self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("value", 2))
+    self.VC_WINDOW = int((self.config.find_one({"setting": "vc_window"}))["value"].get("value", 16))
 
 
   @commands.Cog.listener()
@@ -273,14 +275,40 @@ class Leveller(commands.Cog):
   async def end_segment(self, member_id):
     doc = self.vc.find_one_and_delete({"_id": member_id})
     if doc:
-      await self.internal_award(member_id, calculate(timedelta=(datetime.now(timezone.utc) - doc["joined"])), "voice")
+      duration = datetime.now(timezone.utc) - doc["joined"]
+      granted = self.apply_daily_cap(member_id, doc["joined"], duration)
+      if granted > timedelta(0):
+        await self.internal_award(member_id, calculate(timedelta=granted), "voice")
+
+  def apply_daily_cap(self, member_id, joined, duration):
+    now = datetime.now(timezone.utc)
+    doc = self.users.find_one({"_id": member_id}) or {}
+    window_start = doc.get("vc_window_start")
+    used = doc.get("vc_window_seconds", 0)
+
+    if window_start is None or now - window_start >= timedelta(hours=self.VC_WINDOW):
+      window_start, used = now, 0
+
+    allowed = max(0, timedelta(hours=self.VC_DAILY_CAP).total_seconds() - used)
+    granted = min(duration.total_seconds(), allowed)
+
+    self.users.update_one(
+      {"_id": member_id},
+      {"$set": {
+        "last_vc_join_time": joined,
+        "vc_window_start": window_start,
+        "vc_window_seconds": used + granted,
+      }},
+      upsert=True,
+    )
+    return timedelta(seconds=granted)
 
   async def refresh_channel(self, channel):
     members = [m for m in channel.members if not m.bot]
     big_enough = len(members) >= self.VC_CONCURRENT_MEMBERS
     for m in members:
       deaf = m.voice.self_deaf or m.voice.deaf
-      skip = any(a.id in self.immune_roles for a in message.author.roles)
+      skip = any(a.id in self.immune_roles for a in m.roles)
       if big_enough and not deaf:
         await self.start_segment(m.id)
       else:
