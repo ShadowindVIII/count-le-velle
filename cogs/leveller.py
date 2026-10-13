@@ -144,9 +144,37 @@ class Leveller(commands.Cog):
     prev = level - 1
     return 5 * prev**2 + 50 * prev + 100 + 1
 
+# ------------------
+# ------------------
+# ---- COMMANDS ----
+# ------------------
+# ------------------
+
   @commands.command()
   @commands.guild_only()
-  @commands.cooldown(1, COMMAND_COOLDOWN)
+  async def help(self, ctx: commands.Context, options: str = None):
+    embed = Embed(title=f'Help', color=discord.Colour.blurple())
+    if options == 'staff':
+      embed.description = """Here's how you use my commands:
+1. `!help` - Displays this message
+2. `!set [user_id] [value] [type]` - Replace a user's current `text` or `voice` experience with `value`
+3. `!award [user_id] [value] [type]` - Adds `value` to a user's `text` or `voice experience
+4. `!config [view/edit/add] `\`\`\`[parameters]\`\`\` - View/adjust configs. Configs that rarely/never change are located in `.env` on the host machine
+"""
+    else:
+      embed.description = """Here's how you use my commands:
+1. `!help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
+2. `!level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
+3. `!level up` - Restore your level roles, if you had any and lost them
+4. `!wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
+5. `!leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
+"""
+    embed.set_footer(text='Greetings. I am the Count. They call me the Count because I LOVE to count')
+    await ctx.send(embed=embed)
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.cooldown(3, COMMAND_COOLDOWN * 60)
   async def wear(self, ctx: commands.Context, role_name: str):
     role = discord.utils.get(self.guild.roles, name="role_name")
     match = next((t for t in self.roles if t[1] == role.id), None)
@@ -166,12 +194,6 @@ class Leveller(commands.Cog):
          await member.remove_roles(role)
        else:
          await member.add_roles(role)
-
-# ------------------
-# ------------------
-# ---- COMMANDS ----
-# ------------------
-# ------------------
 
   @commands.command()
   @commands.guild_only()
