@@ -7,7 +7,12 @@ import dotenv
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from pymongo import ReturnDocument
+from pymongo import ReturnDocument, UpdateOne
+from datetime import datetime, timedelta, timezone
+
+import requests
+import asyncio
+import time
 
 ADMIN_ROLE_ID = int(os.environ["ADMIN_ROLE_ID"])
 
@@ -20,6 +25,72 @@ class Admin(commands.Cog):
   @commands.Cog.listener()
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"]))
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_role(ADMIN_ROLE_ID)
+  async def import_lb(self, ctx: commands.Context, start_page: int = 1, end_page: int = 10):
+    url = "https://dash.gaiusbot.me/api/getdata/leaderboard/291184728944410624"
+    session = requests.Session()
+    session.headers['Authorization'] = os.environ['GAIUS_AUTH']
+    start = datetime.now(timezone.utc)
+    count = 0
+    failed = []
+    max_retries = 5
+    i = start_page
+
+    await ctx.send(f"Starting at page {i}, end page {end_page or 'last'}, time {start}")
+
+    while end_page is None or i <= end_page:
+      points = None
+      for attempt in range(max_retries):
+        t0 = time.monotonic()
+        try:
+          r = await asyncio.to_thread(session.post, f'{url}/{i}', json=None, timeout=30)
+        except requests.RequestException as e:
+          print(f"Page {i} attempt {attempt}: {type(e).__name__} after {time.monotonic() - t0:.1f}s", flush=True)
+          await asyncio.sleep(2 ** attempt)
+          continue
+        if r.status_code in (401, 403):
+          await ctx.send(f"Auth failed ({r.status_code}) at page {i}. Refresh GAIUS_AUTH. Resume with `!import_lb {i}`.")
+          return
+        if r.status_code == 429:
+          await asyncio.sleep(10 * (attempt + 1))
+          continue
+        if r.status_code != 200:
+          print(f"Page {i} attempt {attempt}: HTTP {r.status_code}", flush=True)
+          await asyncio.sleep(2 ** attempt)
+          continue
+        points = r.json()['result']['points']
+        break
+
+      if points is None:
+        failed.append(i)
+      elif not points:
+        break
+      else:
+        ops = [
+          UpdateOne(
+            {"_id": p["id"]},
+            {"$set": {"text": p["text"], "vc": p["voice"], "level": p["level"]}},
+            upsert=True)
+          for p in points]
+        await asyncio.to_thread(self.users.bulk_write, ops, ordered=False)
+        count += len(ops)
+
+      if i % 100 == 0:
+        await ctx.send(f"Page {i} done, {count} records so far.")
+      i += 1
+      await asyncio.sleep(1)
+
+    elapsed = datetime.now(timezone.utc) - start
+    pages = i - start_page
+    msg = f"Completed {count} records over {pages} pages in {elapsed}. Last page: {i - 1}."
+    if pages:
+      msg += f" Average {elapsed.total_seconds() / pages:.2f}s/page."
+    if failed:
+      msg += f" Failed pages: {failed}"
+    await ctx.send(msg)
 
   @commands.command()
   @commands.guild_only()
@@ -49,7 +120,7 @@ class Admin(commands.Cog):
         buffer = io.BytesIO(content.encode('utf-8'))
         file = discord.File(fp=buffer, filename=f'{setting}.txt')
         await ctx.send(content='This config is too large to be output in a discord message, here is a text file instead:', file=file)
-      else: 
+      else:
         await ctx.send(f'# Previewing {setting} config:\n```css\n{content}```')
       return
 
@@ -160,11 +231,11 @@ class Admin(commands.Cog):
     total_exp = doc.get("text", 0) + doc.get("voice", 0)
 
     level = 0
-    cutoff_exp = 0
-    while cutoff_exp < total_exp:
-      cutoff_exp = 5 * level**2 + 50 * level + 100
+    needed_exp = 100
+    while total_exp >= needed_exp:
       level += 1
-    current_level = level - 1
+      needed_exp += 5 * level**2 + 50 * level
+    current_level = level
 
     prev_level = doc.get("level")
     if prev_level != current_level:
@@ -222,4 +293,13 @@ class Admin(commands.Cog):
     await self.check(new_doc)
     await ctx.send(content=f"Successfully updated <@{recipient}>'s **{type}** experience to **{amount}**.",allowed_mentions=discord.AllowedMentions.none())
 
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_role(ADMIN_ROLE_ID)
+  async def delete(self, ctx: commands.Context, id: int = 0):
+    doc = self.users.find_one_and_delete({"_id": ctx.author.id})
+    if not doc or id == 0:
+      await ctx.send('No data associated with <@{id}> / {id}.')
+      return
+    await ctx.send(f'Purged data for <@{id}> / {id} ({doc.get("text", 0)} text / {doc.get("voice", 0}) from database.')
 

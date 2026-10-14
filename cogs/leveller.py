@@ -114,11 +114,11 @@ class Leveller(commands.Cog):
     total_exp = doc.get("text", 0) + doc.get("voice", 0)
 
     level = 0
-    cutoff_exp = 0
-    while cutoff_exp < total_exp:
-      cutoff_exp = 5 * level**2 + 50 * level + 100
+    needed_exp = 100
+    while total_exp >= needed_exp:
       level += 1
-    current_level = level - 1
+      needed_exp += 5 * level**2 + 50 * level
+    current_level = level
 
     prev_level = doc.get("level")
     if prev_level != current_level:
@@ -138,11 +138,10 @@ class Leveller(commands.Cog):
         await user.add_roles(role)
         await user.send(message.strip("\""))
 
-  def exp_for_level(self, level):
-    if level <= 0:
+  def exp_for_level(self, n: int = 0):
+    if n <= 0:
       return 0
-    prev = level - 1
-    return 5 * prev**2 + 50 * prev + 100 + 1
+    return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
 
 # ------------------
 # ------------------
@@ -153,13 +152,14 @@ class Leveller(commands.Cog):
   @commands.command()
   @commands.guild_only()
   async def help(self, ctx: commands.Context, options: str = None):
-    embed = Embed(title=f'Help', color=discord.Colour.blurple())
+    embed = Embed(title=f'Help', color=0xab94ab)
     if options == 'staff':
       embed.description = """Here's how you use my commands:
 1. `!help` - Displays this message
 2. `!set [user_id] [value] [type]` - Replace a user's current `text` or `voice` experience with `value`
 3. `!award [user_id] [value] [type]` - Adds `value` to a user's `text` or `voice experience
 4. `!config [view/edit/add] `\`\`\`[parameters]\`\`\` - View/adjust configs. Configs that rarely/never change are located in `.env` on the host machine
+5. `!delete [user_id]` - Delete's a user's records from my database
 """
     else:
       embed.description = """Here's how you use my commands:
@@ -168,13 +168,24 @@ class Leveller(commands.Cog):
 3. `!level up` - Restore your level roles, if you had any and lost them
 4. `!wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
 5. `!leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
+6. `!optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels
 """
     embed.set_footer(text='Greetings. I am the Count. They call me the Count because I LOVE to count')
     await ctx.send(embed=embed)
 
   @commands.command()
+  async def optout(self, ctx: commands.Context):
+    doc = self.users.find_one_and_delete({"_id": ctx.author.id})
+    if not doc:
+      await ctx.send('I could not find any data associated with you to opt you out.')
+      return
+    await ctx.send(f'You have been opted out and your experience data ({doc.get("text", 0)} text / {doc.get("voice", 0}) has been deleted from the database. To restore it and/or opt back in, contact staff.')
+    optout = discord.utils.get(self.guild.roles, 'No Exp')
+    await ctx.author.add_roles(optout)
+
+  @commands.command()
   @commands.guild_only()
-  @commands.cooldown(3, COMMAND_COOLDOWN * 60)
+  @commands.cooldown(3, 60 * 60)
   async def wear(self, ctx: commands.Context, role_name: str):
     role = discord.utils.get(self.guild.roles, name="role_name")
     match = next((t for t in self.roles if t[1] == role.id), None)
