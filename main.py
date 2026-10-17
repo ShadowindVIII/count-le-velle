@@ -9,6 +9,8 @@ from cogs.admin import Admin
 from cogs.leveller import Leveller
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+import random
+from datetime import datetime, timedelta
 
 intents = discord.Intents()
 intents.message_content = True
@@ -91,6 +93,15 @@ async def print_error(error_string: str):
 async def crash(ctx: commands.Context):
   await ctx.send("done")
   await bot.close()
+
+@bot.command()
+async def ping(self, ctx: commands.Context):
+  init_text = 'Counting...'
+  msg = await ctx.reply(init_text)
+  delta_ms = ((ctx.message.created_at - msg.created_at).microseconds)/1000
+  delta_s = abs(ctx.message.created_at - msg.created_at).seconds
+  ping_text = 'Done counting! I responded in `%d.%03ds`' % (delta_s, delta_ms) + ' and have been running for ' + self.__uptime()
+  await msg.edit(content=ping_text)
 
 @bot.event
 async def on_ready():

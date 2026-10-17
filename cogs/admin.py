@@ -301,5 +301,5 @@ class Admin(commands.Cog):
     if not doc or id == 0:
       await ctx.send('No data associated with <@{id}> / {id}.')
       return
-    await ctx.send(f'Purged data for <@{id}> / {id} ({doc.get("text", 0)} text / {doc.get("voice", 0}) from database.')
+    await ctx.send(f'Purged data for <@{id}> / {id} ({doc.get("text", 0)} text / {doc.get("voice", 0)}) from database.')
 
