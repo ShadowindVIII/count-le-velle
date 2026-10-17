@@ -88,26 +88,17 @@ class Leveller(commands.Cog):
 # -----------------
 
   async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0:
+    if recipient == 0 or type not in ["text", "voice"]:
       return
-    doc = self.users.find_one({"_id": recipient})
 
-    if type == "text":
-      new_doc = self.users.find_one_and_update(
-        {"_id": recipient},
-        {"$set": {"text": (doc.get("text", 0) + amount)}},
-        upsert=True,
-        return_document=ReturnDocument.AFTER
-      )
-    if type == "voice":
-      new_doc = self.users.find_one_and_update(
-        {"_id": recipient},
-        {"$set": {"voice": (doc.get("voice", 0) + amount)}},
-        upsert=True,
-        return_document=ReturnDocument.AFTER
-      )
-
-    await self.check(new_doc)
+    new_doc = self.users.find_one_and_update(
+      {"_id": recipient},
+      {"$inc": {type: amount}},
+      upsert=True,
+      return_document=ReturnDocument.AFTER
+    )
+    if new_doc:
+      await self.check(new_doc)
 
   async def calculate(self, message: discord.Message = None, timedelta: timedelta = None):
     if message:
@@ -357,7 +348,7 @@ class Leveller(commands.Cog):
     for m in members:
       deaf = m.voice.self_deaf or m.voice.deaf
       skip = any(a.id in self.immune_roles for a in m.roles)
-      if big_enough and not deaf:
+      if big_enough and not deaf and not skip:
         await self.start_segment(m.id)
       else:
         await self.end_segment(m.id)
@@ -377,3 +368,20 @@ class Leveller(commands.Cog):
     for ch in (before.channel, after.channel):
       if ch is not None:
         await self.refresh_channel(ch)
+
+  @tasks.loop(minutes=10)
+  async def double_check(self):
+    active = set()
+    for channel in self.guild.voice_channels:
+      if self.DEBUG[0] and channel.category_id != self.DEBUG[1]:
+        continue
+      await self.refresh_channel(channel)
+      members = [m for m in channel.members if not m.bot]
+      if len(members) >= self.VC_CONCURRENT_MEMBERS:
+        active.update(m.id for m in members if not (m.voice.self_deaf or m.voice.deaf))
+    for doc in list(self.vc.find({"_id": {"$nin": list(active)}})):
+      await self.end_segment(doc["_id"])
+
+  @double_check.before_loop
+  async def before_double_check(self):
+    await self.bot.wait_until_ready()
