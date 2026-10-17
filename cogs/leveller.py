@@ -18,6 +18,7 @@ class Leveller(commands.Cog):
     self.users = mongo.database.users
     self.vc = mongo.database.vc
     self.config = mongo.database.config
+    self.DEBUG = True
 
   @commands.Cog.listener()
   async def on_ready(self):
@@ -39,18 +40,23 @@ class Leveller(commands.Cog):
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
     self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("hours", 2))
     self.VC_WINDOW = int((self.config.find_one({"setting": "vc_window"}))["value"].get("hours", 16))
+    debug = (self.config.find_one({"setting": "debug"}))["value"]
+    self.DEBUG = [debug.get("enabled", "True")] == "True", int(debug.get("category_id"))]
 
 
   @commands.Cog.listener()
   async def on_message(self, message):
+    if self.DEBUG[0] and not message.channel.category_id == self.DEBUG[1]:
+      return
     if isinstance(message.channel, discord.DMChannel):
       return
     if message.author.bot:
       return
-    if message.content:
-      if message.content.startswith(self.bot.command_prefix):
-        return
-    elif not message.attachments:
+    if isinstance(message.channel, discord.VoiceChannel):
+     return
+    if message.content.startswith(self.bot.command_prefix):
+      return
+    if len(message.content) < 2 and not message.attachments:
       return
     if any(a.id in self.immune_roles for a in message.author.roles):
       return
@@ -358,6 +364,10 @@ class Leveller(commands.Cog):
 
   @commands.Cog.listener()
   async def on_voice_state_update(self, member, before, after):
+    if self.DEBUG[0]:
+      channel = after.channel or before.channel
+      if not channel.category_id == self.DEBUG[1]:
+        return
     changed_channel = before.channel != after.channel
     changed_inactive = before.self_deaf != after.self_deaf or before.deaf != after.deaf
     if not (changed_channel or changed_inactive):
