@@ -271,7 +271,7 @@ class Leveller(commands.Cog):
       return
 
     if start < 1 or finish <= start or finish - start + 1 > 50:
-      await ctx.send(f"You cannot possibly expect me to count through such a range. Range must be valid (e.g. `10-25` and at most FIFTY results at a time. No more!")
+      await ctx.send(f"You cannot possibly expect me to count through such a range. Range must be valid (e.g. `10-25`) and at most FIFT results at a time. No more!")
       return
 
     skip = start - 1
@@ -289,9 +289,9 @@ class Leveller(commands.Cog):
     ]
 
     description = "\n".join(
-      f'{rank}. <@{doc["_id"]}>: Level `{doc.get("level", 0)}` '
-      f'w/ **{doc.get("text", 0) + doc.get("voice", 0)}** Total EXP '
-      f'(**{doc.get("text", 0)}** Text / **{doc.get("voice", 0)}** Voice)'
+      f'{rank}. <@{doc["_id"]}> Level `{doc.get("level", 0)}` '
+      f'**{doc.get("text", 0) + doc.get("voice", 0)}** Total '
+      f'(**{doc.get("text", 0)}** Text / **{doc.get("voice", 0)}** VC)'
       for rank, doc in enumerate(self.users.aggregate(pipeline), start=start)
     )
     embed = Embed(title="Leaderboard", description=description, color=0xA9BFBE)
