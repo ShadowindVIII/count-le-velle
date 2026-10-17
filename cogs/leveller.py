@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import Member, Status, User, Reaction, Message, Embed
 
 from pymongo.mongo_client import MongoClient
@@ -41,7 +41,7 @@ class Leveller(commands.Cog):
     self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("hours", 2))
     self.VC_WINDOW = int((self.config.find_one({"setting": "vc_window"}))["value"].get("hours", 16))
     debug = (self.config.find_one({"setting": "debug"}))["value"]
-    self.DEBUG = [debug.get("enabled", "True")] == "True", int(debug.get("category_id"))]
+    self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id"))]
 
 
   @commands.Cog.listener()
@@ -176,7 +176,7 @@ class Leveller(commands.Cog):
     if not doc:
       await ctx.send('I could not find any data associated with you to opt you out.')
       return
-    await ctx.send(f'You have been opted out and your experience data ({doc.get("text", 0)} text / {doc.get("voice", 0}) has been deleted from the database. To restore it and/or opt back in, contact staff.')
+    await ctx.send(f'You have been opted out and your experience data ({doc.get("text", 0)} text / {doc.get("voice", 0)}) has been deleted from the database. To restore it and/or opt back in, contact staff.')
     optout = discord.utils.get(self.guild.roles, 'No Exp')
     await ctx.author.add_roles(optout)
 
