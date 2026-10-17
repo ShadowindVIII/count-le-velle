@@ -29,7 +29,7 @@ try:
 except Exception as e:
   print(e)
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix=os.environ['PREFIX'], intents=intents)
 bot.remove_command('help')
 
 bot.add_cog(Leveller(bot, mongo))
