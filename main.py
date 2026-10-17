@@ -88,7 +88,7 @@ async def print_error(error_string: str):
 # For emergencies only 
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def crash(ctx: commands.Context, ident: str):
+async def crash(ctx: commands.Context):
   await ctx.send("done")
   await bot.close()
 
@@ -103,8 +103,8 @@ async def on_ready():
   #  status = (startup_info[1]).strip()
   #  await bot.change_presence(activity=discord.CustomActivity(name=status))
   await bot.change_presence(activity=discord.CustomActivity(name=status))
-  embed = discord.Embed(title='\\*yaaaaaaawwwwn\\*', color=int(0xda9124), description=f"""
-I have awoken. 
+  embed = discord.Embed(title='\\*yaaaaaaawwwwn\\*', color=int(0xAAAAAA), description=f"""
+I have awoken.
 Status: {status}
 My latency: `{round(bot.latency * 1000)}` ms""")
 
