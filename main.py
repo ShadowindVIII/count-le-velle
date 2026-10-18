@@ -7,6 +7,7 @@ import time
 import asyncio
 from cogs.admin import Admin
 from cogs.leveller import Leveller
+from cogs.voice import Voice
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import random
@@ -35,6 +36,7 @@ bot = commands.Bot(command_prefix=os.environ['PREFIX'], intents=intents)
 bot.remove_command('help')
 
 bot.add_cog(Leveller(bot, mongo))
+bot.add_cog(Voice(bot, mongo))
 bot.add_cog(Admin(bot, mongo))
 
 # **************

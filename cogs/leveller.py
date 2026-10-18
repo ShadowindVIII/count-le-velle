@@ -16,39 +16,29 @@ class Leveller(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
     self.bot = bot
     self.users = mongo.database.users
-    self.vc = mongo.database.vc
     self.config = mongo.database.config
-    self.DEBUG = True
+    self.update_database()
 
   @commands.Cog.listener()
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"])) 
-    self.vc.delete_many({})
-    for channel in self.guild.channels:
-      if not isinstance(channel, discord.VoiceChannel):
-        continue
-      await self.refresh_channel(channel)
     self.update_database()
 
   def update_database(self):
     self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
     self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
-    self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
-    self.VC_CONCURRENT_MEMBERS = int((self.config.find_one({"setting": "vc_concurrent_members"}))["value"].get("value", 2))
     self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
-    self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("hours", 2))
-    self.VC_WINDOW = int((self.config.find_one({"setting": "vc_window"}))["value"].get("hours", 16))
     debug = (self.config.find_one({"setting": "debug"}))["value"]
     self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id"))]
 
 
   @commands.Cog.listener()
   async def on_message(self, message):
-    if self.DEBUG[0] and not message.channel.category_id == self.DEBUG[1]:
+    if message.guild is None:
       return
-    if isinstance(message.channel, discord.DMChannel):
+    if self.DEBUG[0] and not (message.channel.category_id == self.DEBUG[1]):
       return
     if message.author.bot:
       return
@@ -77,8 +67,7 @@ class Leveller(commands.Cog):
       upsert=True
     )
 
-    amount = await self.calculate(message)
-    await self.internal_award(recipient=message.author.id, amount=amount, type="text")
+    await self.internal_award(recipient=message.author.id, amount=self.calculate(message), type="text")
 
 
 # -----------------
@@ -100,11 +89,8 @@ class Leveller(commands.Cog):
     if new_doc:
       await self.check(new_doc)
 
-  async def calculate(self, message: discord.Message = None, timedelta: timedelta = None):
-    if message:
-      return self.TEXT_AWARD
-    if timedelta:
-      return (self.VOICE_AWARD * (timedelta // 60))
+  def calculate(self, message: discord.Message = None):
+    return self.TEXT_AWARD
 
   async def check(self, doc):
     user = await self.guild.fetch_member(doc["_id"])
@@ -122,7 +108,7 @@ class Leveller(commands.Cog):
       self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
       if prev_level is not None and current_level > prev_level:
         try:
-          await user.send(f"Congratulations **{user.nick}**, you just advanced to **level {current_level}**!")
+          await user.send(f"Congratulations **{user.nick or user.display_name}**, you just advanced to **level {current_level}**!")
         except discord.Forbidden:
           pass
 
@@ -132,6 +118,8 @@ class Leveller(commands.Cog):
         role = self.guild.get_role(role_id)
         if not role:
           role = await self.guild.fetch_role(role_id)
+        if int(doc.get("preference", None)):
+          continue
         await user.add_roles(role)
         await user.send(message.strip("\""))
 
@@ -182,28 +170,40 @@ class Leveller(commands.Cog):
 
   @commands.command()
   @commands.guild_only()
-  @commands.cooldown(3, 60 * 60)
-  async def wear(self, ctx: commands.Context, role_name: str):
-    role = discord.utils.get(self.guild.roles, name="role_name")
-    match = next((t for t in self.roles if t[1] == role.id), None)
+  @commands.cooldown(3, 60 * 60, commands.BucketType.user)
+  async def wear(self, ctx: commands.Context, *, role_name: str):
+    role = discord.utils.find(
+      lambda r: r.name.casefold() == role_name.casefold(),
+      self.guild.roles,
+    )
+    match = next((t for t in self.roles if role and t[1] == role.id), None)
     if not match:
-      await ctx.send("After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".")
+      await ctx.send(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".")
       return
 
-    doc = self.users.find_one({"_id": ctx.author.id})
-    if not doc:
-      self.users.insert_one({"_id": ctx.author.id})
+    doc = self.users.find_one({"_id": ctx.author.id}) or {}
+    if match[0] > doc.get("level", 0):
+      await ctx.send("I have counted every experience point you have, and determined you have not reached the level required for that role.")
       return
 
-    accessbile = [t for t in self.roles if t[0] <= doc.get("level", 0)]
-    if accessible:
-      if role in accessible:
-       if role in member.roles:
-         await member.remove_roles(role)
-       else:
-         await member.add_roles(role)
+    thresholds = {t[1]: t[0] for t in self.roles}
+    to_remove = [
+      r for r in ctx.author.roles
+      if r.id in thresholds and thresholds[r.id] < match[0]
+    ]
+    if to_remove:
+      await ctx.author.remove_roles(*to_remove)
+    if role not in ctx.author.roles:
+      await ctx.author.add_roles(role)
 
-  @commands.command()
+    await ctx.send("You are hereby awarded the role you seek.")
+    self.users.update_one(
+      {"_id": ctx.author.id},
+      {"$set": {"preference": role.id}},
+      upsert=True,
+    )
+
+  @commands.command(aliases=['levelle'])
   @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def level(self, ctx: commands.Context, option: int|User|Member|str = 0):
@@ -245,8 +245,8 @@ class Leveller(commands.Cog):
     embed.add_field(name='Total EXP', value=current_exp, inline=True)
     embed.add_field(name='Level', value=current_level, inline=True)
 
-    old_exp = self.exp_for_level(doc.get("level", 0))
-    next_exp = self.exp_for_level(1 + doc.get("level", 0))
+    old_exp = self.exp_for_level(doc.get("level", 0) - 1)
+    next_exp = self.exp_for_level(doc.get("level", 0) + 1)
     progress = (current_exp - old_exp) / (next_exp - old_exp) * 100
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
     embed.add_field(name='Next Role', value=next((f'<@&{r}>' for t, r, m in self.roles if t > current_level), 'None!'), inline=True)
@@ -267,11 +267,11 @@ class Leveller(commands.Cog):
       else:
         start, finish = 1, int(low)
     except ValueError:
-      await ctx.send("Usage: `!leaderboard 10` or `!leaderboard 50-100`")
+      await ctx.send("Usage: `!leaderboard n` for the top `n` people or `!leaderboard 50-80` (capped at 30)")
       return
 
-    if start < 1 or finish <= start or finish - start + 1 > 50:
-      await ctx.send(f"You cannot possibly expect me to count through such a range. Range must be valid (e.g. `10-25`) and at most FIFT results at a time. No more!")
+    if start < 1 or finish <= start or finish - start > 30:
+      await ctx.send(f"You cannot possibly expect me to count through such a range. You shall specify it to me in the correct formatting (e.g. `10-25`) and may only request at most THIRTY results at a time. No more!")
       return
 
     skip = start - 1
@@ -290,7 +290,7 @@ class Leveller(commands.Cog):
 
     description = "\n".join(
       f'{rank}. <@{doc["_id"]}> Level `{doc.get("level", 0)}` '
-      f'**{doc.get("text", 0) + doc.get("voice", 0)}** Total '
+      f'- **{doc.get("text", 0) + doc.get("voice", 0)}** Total '
       f'(**{doc.get("text", 0)}** Text / **{doc.get("voice", 0)}** VC)'
       for rank, doc in enumerate(self.users.aggregate(pipeline), start=start)
     )
@@ -303,85 +303,3 @@ class Leveller(commands.Cog):
 # **** VOICE *****
 # ****************
 # ****************
-
-  async def start_segment(self, member_id):
-    self.vc.update_one(
-      {"_id": member_id},
-      {"$setOnInsert": {"joined": datetime.now(timezone.utc)}},
-      upsert=True,
-    )
-
-  async def end_segment(self, member_id):
-    doc = self.vc.find_one_and_delete({"_id": member_id})
-    if doc:
-      duration = datetime.now(timezone.utc) - doc["joined"]
-      granted = self.apply_daily_cap(member_id, doc["joined"], duration)
-      if granted > timedelta(0):
-        await self.internal_award(member_id, calculate(timedelta=granted), "voice")
-
-  def apply_daily_cap(self, member_id, joined, duration):
-    now = datetime.now(timezone.utc)
-    doc = self.users.find_one({"_id": member_id}) or {}
-    window_start = doc.get("vc_window_start")
-    used = doc.get("vc_window_seconds", 0)
-
-    if window_start is None or now - window_start >= timedelta(hours=self.VC_WINDOW):
-      window_start, used = now, 0
-
-    allowed = max(0, timedelta(hours=self.VC_DAILY_CAP).total_seconds() - used)
-    granted = min(duration.total_seconds(), allowed)
-
-    self.users.update_one(
-      {"_id": member_id},
-      {"$set": {
-        "last_vc_join_time": joined,
-        "vc_window_start": window_start,
-        "vc_window_seconds": used + granted,
-      }},
-      upsert=True,
-    )
-    return timedelta(seconds=granted)
-
-  async def refresh_channel(self, channel):
-    members = [m for m in channel.members if not m.bot]
-    big_enough = len(members) >= self.VC_CONCURRENT_MEMBERS
-    for m in members:
-      deaf = m.voice.self_deaf or m.voice.deaf
-      skip = any(a.id in self.immune_roles for a in m.roles)
-      if big_enough and not deaf and not skip:
-        await self.start_segment(m.id)
-      else:
-        await self.end_segment(m.id)
-
-  @commands.Cog.listener()
-  async def on_voice_state_update(self, member, before, after):
-    if self.DEBUG[0]:
-      channel = after.channel or before.channel
-      if not channel.category_id == self.DEBUG[1]:
-        return
-    changed_channel = before.channel != after.channel
-    changed_inactive = before.self_deaf != after.self_deaf or before.deaf != after.deaf
-    if not (changed_channel or changed_inactive):
-      return
-    if changed_channel:
-      await self.end_segment(member.id)
-    for ch in (before.channel, after.channel):
-      if ch is not None:
-        await self.refresh_channel(ch)
-
-  @tasks.loop(minutes=10)
-  async def double_check(self):
-    active = set()
-    for channel in self.guild.voice_channels:
-      if self.DEBUG[0] and channel.category_id != self.DEBUG[1]:
-        continue
-      await self.refresh_channel(channel)
-      members = [m for m in channel.members if not m.bot]
-      if len(members) >= self.VC_CONCURRENT_MEMBERS:
-        active.update(m.id for m in members if not (m.voice.self_deaf or m.voice.deaf))
-    for doc in list(self.vc.find({"_id": {"$nin": list(active)}})):
-      await self.end_segment(doc["_id"])
-
-  @double_check.before_loop
-  async def before_double_check(self):
-    await self.bot.wait_until_ready()
