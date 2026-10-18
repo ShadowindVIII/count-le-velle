@@ -12,7 +12,7 @@ import os
 import dotenv
 COMMAND_COOLDOWN = os.environ['COMMAND_COOLDOWN']
 
-class Leveller(commands.Cog):
+class Text(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
     self.bot = bot
     self.users = mongo.database.users
@@ -69,104 +69,11 @@ class Leveller(commands.Cog):
 
     await self.internal_award(recipient=message.author.id, amount=self.calculate(message), type="text")
 
-
-# -----------------
-# -----------------
-# --- INTERNALS ---
-# -----------------
-# -----------------
-
-  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice"]:
-      return
-
-    new_doc = self.users.find_one_and_update(
-      {"_id": recipient},
-      {"$inc": {type: amount}},
-      upsert=True,
-      return_document=ReturnDocument.AFTER
-    )
-    if new_doc:
-      await self.check(new_doc)
-
-  def calculate(self, message: discord.Message = None):
-    return self.TEXT_AWARD
-
-  async def check(self, doc):
-    user = await self.guild.fetch_member(doc["_id"])
-    total_exp = doc.get("text", 0) + doc.get("voice", 0)
-
-    level = 0
-    needed_exp = 100
-    while total_exp >= needed_exp:
-      level += 1
-      needed_exp += 5 * level**2 + 50 * level
-    current_level = level
-
-    prev_level = doc.get("level")
-    if prev_level != current_level:
-      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
-      if prev_level is not None and current_level > prev_level:
-        try:
-          await user.send(f"Congratulations **{user.nick or user.display_name}**, you just advanced to **level {current_level}**!")
-        except discord.Forbidden:
-          pass
-
-    user_role_list = [role.id for role in user.roles]
-    for threshold, role_id, message in self.roles:
-      if current_level >= threshold and role_id not in user_role_list:
-        role = self.guild.get_role(role_id)
-        if not role:
-          role = await self.guild.fetch_role(role_id)
-        if int(doc.get("preference", None)):
-          continue
-        await user.add_roles(role)
-        await user.send(message.strip("\""))
-
-  def exp_for_level(self, n: int = 0):
-    if n <= 0:
-      return 0
-    return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
-
 # ------------------
 # ------------------
 # ---- COMMANDS ----
 # ------------------
 # ------------------
-
-  @commands.command()
-  @commands.guild_only()
-  async def help(self, ctx: commands.Context, options: str = None):
-    embed = Embed(title=f'Help', color=0xab94ab)
-    if options == 'staff':
-      embed.description = """Here's how you use my commands:
-1. `!help` - Displays this message
-2. `!set [user_id] [value] [type]` - Replace a user's current `text` or `voice` experience with `value`
-3. `!award [user_id] [value] [type]` - Adds `value` to a user's `text` or `voice experience
-4. `!config [view/edit/add] `\`\`\`[parameters]\`\`\` - View/adjust configs. Configs that rarely/never change are located in `.env` on the host machine
-5. `!delete [user_id]` - Delete's a user's records from my database
-"""
-    else:
-      embed.description = """Here's how you use my commands:
-1. `!help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
-2. `!level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
-3. `!level up` - Restore your level roles, if you had any and lost them
-4. `!wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
-5. `!leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
-6. `!optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels
-"""
-    embed.set_footer(text='Greetings. I am the Count. They call me the Count because I LOVE to count')
-    await ctx.send(embed=embed)
-
-  @commands.command()
-  async def optout(self, ctx: commands.Context):
-    doc = self.users.find_one_and_delete({"_id": ctx.author.id})
-    if not doc:
-      await ctx.send('I could not find any data associated with you to opt you out.')
-      return
-    await ctx.send(f'You have been opted out and your experience data ({doc.get("text", 0)} text / {doc.get("voice", 0)}) has been deleted from the database. To restore it and/or opt back in, contact staff.')
-    optout = discord.utils.get(self.guild.roles, 'No Exp')
-    await ctx.author.add_roles(optout)
 
   @commands.command()
   @commands.guild_only()
@@ -298,8 +205,62 @@ class Leveller(commands.Cog):
     await ctx.send(embed=embed)
 
 
-# ****************
-# ****************
-# **** VOICE *****
-# ****************
-# ****************
+# -----------------
+# -----------------
+# --- INTERNALS ---
+# -----------------
+# -----------------
+
+  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
+    if recipient == 0 or type not in ["text", "voice"]:
+      return
+
+    new_doc = self.users.find_one_and_update(
+      {"_id": recipient},
+      {"$inc": {type: amount}},
+      upsert=True,
+      return_document=ReturnDocument.AFTER
+    )
+    if new_doc:
+      await self.check(new_doc)
+
+  def calculate(self, message: discord.Message = None):
+    return self.TEXT_AWARD
+
+  async def check(self, doc):
+    user = await self.guild.fetch_member(doc["_id"])
+    total_exp = doc.get("text", 0) + doc.get("voice", 0)
+
+    level = 0
+    needed_exp = 100
+    while total_exp >= needed_exp:
+      level += 1
+      needed_exp += 5 * level**2 + 50 * level
+    current_level = level
+
+    prev_level = doc.get("level")
+    if prev_level != current_level:
+      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
+      if prev_level is not None and current_level > prev_level:
+        try:
+          await user.send(f"Congratulations **{user.nick or user.display_name}**, you just advanced to **level {current_level}**!")
+        except discord.Forbidden:
+          pass
+
+    user_role_list = [role.id for role in user.roles]
+    for threshold, role_id, message in self.roles:
+      if current_level >= threshold and role_id not in user_role_list:
+        role = self.guild.get_role(role_id)
+        if not role:
+          role = await self.guild.fetch_role(role_id)
+        if int(doc.get("preference", None)):
+          continue
+        await user.add_roles(role)
+        await user.send(message.strip("\""))
+
+
+  def exp_for_level(self, n: int = 0):
+    if n <= 0:
+      return 0
+    return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
+
