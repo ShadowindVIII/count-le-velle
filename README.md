@@ -18,15 +18,24 @@ Please note that this software is presented to the public **as-is, with no guara
 - When someone leaves, deafen or switch VC, the time spent in minutes gets awarded at a rate of 6 exp/min (configurable). (People talk ~3x faster than they type so text is about 3x higher by default to accommodate)
 - VC experience is separate from text exp, and VC exp caps out at 2h (configurable) per 23h period (also configurable), to limit the efficacy of sitting AFK in a VC with an alt overnight
 - If someone is in a VC but muted, their **voice experience will still count but messages they send in a VC's text channel will not be counted**. Please keep this in mind and decide with your staff team whether you need to edit this
+- `/ping` command for checking latency/uptime
 - `/help` command and `/help staff` to see staff commands
 - `/level [user_id]` - leave blank to view your own level/exp
 - `/leaderboard n` to see the top `n` spots on the overall leaderboard, or `/leaderboard a-b` to view a specific range, capped at 30 per command use. You can also specify Weekly/Monthly to see where you stand compared to other people that are currently active 
-- `/optout` command for those who want to delete all traces of their experience data
+- `/optout` command for those who want to delete all traces of their experience data. Assigns a "No Exp" role if it exists, to prevent future exp gain
 - `/wear [role name]` command to switch which color/icon they use - only one role is added at a time.
 - At configurable thresholds, roles can be granted to users as rewards for spending time in the server. If a config value starts with `reward_` it is automatically treated as a reward, and requires 3 parameters:
 - - `threshold` (int) - the level that a role should be awarded at
 - - `role_id` (int) - the ID of the role which should be awarded. Please note that all roles have to be underneath the bot's highest role
 - - `message` (str) - a custom phrase enclosed in quotation marks that will be sent when a user unlocks a new role. Include `\n` if you wish to include line breaks. More info in the Editing Configs section.
+
+### Staff-exclusive commands
+
+This section assumes a prefix command of `!`, change it accordingly. The following commands & examples are for staff use only, for adjusting and maintaining people's experience data as needed:
+- `!set [user_id] [value] <type>` - Set new value for someone's experience, including negatives if you really want. By default the command will edit `text` type of exp if you do not specify.
+- `!award [user_id] [value] <type>` - Adds `value` amount of experience to a person's existing exp. Edits `text` type of experience by default.
+- `!delete [user_id]` - Deletes all data associated with a user, as if they used `/optout` except without assigning them a "No Exp" role.
+- `!transfer [filename]` - Command for doing a one-time bulk write using a JSON from Gaius Play. This is specifically using the file requested from the owner of the bot, and left in in case anybody else is migrating from Gaius. The JSON should be in the root directory where `main.py` sits.
 
 ### Editing Configs
 No role rewards exist in the config by default. By default, the following values will be used for operation:

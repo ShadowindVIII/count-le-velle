@@ -14,6 +14,9 @@ import requests
 import asyncio
 import time
 
+import asyncio
+from pymongo import UpdateOne
+
 ADMIN_ROLE_ID = int(os.environ["ADMIN_ROLE_ID"])
 STAFF_ROLE_ID = int(os.environ["STAFF_ROLE_ID"])
 
@@ -36,6 +39,37 @@ class Admin(commands.Cog):
     delta_s = abs(ctx.message.created_at - msg.created_at).seconds
     ping_text = 'Done counting! I responded in `%d.%03ds`' % (delta_s, delta_ms) + ' and have been running for ' + self.__uptime()
     await msg.edit(content=ping_text)
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
+  async def transfer(self, ctx: commands.Context, filename: str):
+    with open(filename, encoding="utf-8") as f:
+      data = json.load(f)
+
+    await ctx.send('Initiating transfer...')
+    ops = []
+    for key, raw in data.items():
+      item = json.loads(raw) if isinstance(raw, str) else raw
+      text = int(round(float(item["text"])))
+      voice = int(round(float(item["voice"])))
+      ops.append(UpdateOne(
+        {"_id": int(key)},
+        {
+          "$set": {
+            "text": text,
+            "vc": voice,
+            "level": exp_to_level(text + voice),
+          },
+          "$setOnInsert": {"preference": 0},
+        },
+        upsert=True,
+      ))
+
+    result = await asyncio.to_thread(self.mongo.collection.bulk_write, ops)
+    await ctx.send(
+      f'done! matched {result.matched_count}, inserted {result.upserted_count}'
+    )
 
   @commands.command()
   @commands.guild_only()

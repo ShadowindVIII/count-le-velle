@@ -9,5 +9,6 @@ RUN python -m pip install -r requirements.txt
 
 COPY main.py .
 COPY cogs cogs
+COPY *.json .
 
 CMD ["python3", "main.py"]
