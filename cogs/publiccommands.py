@@ -159,33 +159,26 @@ class PublicCommands(commands.Cog):
   @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def level(self, ctx: ApplicationContext,
-                  option: Option(str, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
+                  option: Option(str, 'ID of the user you wish to check. Leave blank to view your level.', default="0", name="user")):
     await ctx.response.defer(ephemeral=True)
-    if isinstance(option, str):
-      try:
-        id = int(option)
-      except ValueError:
-        return await ctx.followup.send("Invalid user ID.", ephemeral=True)
-    if option in ["0", 0]:
+    try:
+      id = int(option)
+    except ValueError:
+      return await ctx.followup.send("Invalid user ID.", ephemeral=True)
+    if id == 0:
       id = ctx.author.id
-    elif isinstance(option, User) or isinstance(option, Member):
-      id = option.id
-    else:
-      id = option
 
     try:
       user = await self.guild.fetch_member(id)
-    except discord.NotFound:
-      user = None
-    except discord.HTTPException:
+    except (discord.NotFound, discord.HTTPException):
       user = None
 
-    if not id or not user:
-      await ctx.respond(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!", ephemeral=True)
+    if not user:
+      await ctx.followup.send(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!", ephemeral=True)
       return
     doc = self.users.find_one({"_id": id})
     if not doc:
-      await ctx.respond(f"It seems as though this `{option}` person has no experience data for me to count!", ephemeral=True)
+      await ctx.followup.send(f"It seems as though this `{option}` person has no experience data for me to count!", ephemeral=True)
       return
 
     current_level = doc.get("level", 0)
