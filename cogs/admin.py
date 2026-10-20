@@ -162,7 +162,7 @@ class Admin(commands.Cog):
         file = discord.File(fp=buffer, filename=f'{setting}.txt')
         await ctx.send(content='This config is too large to be output in a discord message, here is a text file instead:', file=file)
       else:
-        await ctx.send(f'# Previewing {setting} config:\n```css\n{content}```')
+        await ctx.send(f'# Previewing {setting if setting not in [None, ""] else "every"} config:\n```css\n{content}```')
       return
 
     if action == "remove":
