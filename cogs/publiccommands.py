@@ -95,7 +95,7 @@ class PublicCommands(commands.Cog):
         privacy = f"\n\nMy Privacy Policy can be found [here]({os.environ['PRIVACY_POLICY_URL']})"
       else:
         privacy = ""
-      embed.description = """Here's how you use my commands:
+      embed.description = f"""Here's how you use my commands:
 1. `!help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
 2. `!level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
 3. `!level up` - Restore your level roles, if you had any and lost them
