@@ -43,6 +43,28 @@ class Admin(commands.Cog):
   @commands.command()
   @commands.guild_only()
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
+  async def fixvoice(self, ctx: commands.Context):
+    await ctx.send('started')
+    try:
+      t = time.perf_counter()
+      result = await asyncio.to_thread(
+        self.users.update_many,
+        {"vc": {"$exists": True}},
+        [
+          {"$set": {"voice": {"$ifNull": ["$voice", "$vc"]}}},
+          {"$unset": "vc"},
+        ],
+      )
+      await ctx.send(
+        f'fixed {result.modified_count} in {time.perf_counter() - t:.1f}s'
+      )
+    except Exception as e:
+      await ctx.send(f'error: {type(e).__name__}: {e}')
+      raise
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def transfer(self, ctx: commands.Context, filename: str):
     with open(filename, encoding="utf-8") as f:
       data = json.load(f)
@@ -58,7 +80,7 @@ class Admin(commands.Cog):
         {
           "$set": {
             "text": text,
-            "vc": voice,
+            "voice": voice,
             "level": exp_to_level(text + voice),
           },
           "$setOnInsert": {"preference": 0},
@@ -66,7 +88,7 @@ class Admin(commands.Cog):
         upsert=True,
       ))
 
-    result = await asyncio.to_thread(self.mongo.collection.bulk_write, ops)
+    result = await asyncio.to_thread(self.users.bulk_write, ops)
     await ctx.send(
       f'done! matched {result.matched_count}, inserted {result.upserted_count}'
     )
