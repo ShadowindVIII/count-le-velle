@@ -40,7 +40,7 @@ class Voice(commands.Cog):
     self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("hours", 2))
     self.VC_WINDOW = int((self.config.find_one({"setting": "vc_window"}))["value"].get("hours", 16))
     debug = (self.config.find_one({"setting": "debug"}))["value"]
-    self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id"))]
+    self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id", 0))]
 
 
 

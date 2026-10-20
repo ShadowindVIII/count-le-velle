@@ -34,7 +34,7 @@ class Text(commands.Cog):
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
     debug = (self.config.find_one({"setting": "debug"}))["value"]
-    self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id"))]
+    self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id", 0))]
 
 
   @commands.Cog.listener()

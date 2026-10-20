@@ -47,7 +47,7 @@ No role rewards exist in the config by default. By default, the following values
 - `immune_roles` - `list=[]`. Populate this list with role IDs that you want the bot to ignore messages from, separated by commas
 - `vc_daily_cap` - `hours=2`. Number of hours that voice channel users should be able to gain experience, per `vc_window` period
 - `vc_window` - `hours=23`. It's 23 instead of 24 in case people join a channel frequently and arrive slightly earlier than usual
-- `debug` - `enabled=False` and `category_id=0`. Specify `enabled=True` and `category_id` to the ID of a category with private channel(s) if you wish to edit the code & test it
+- `debug` - `enabled=True` and `category_id=0`. Specify `enabled=True` and `category_id` to the ID of a category with private channel(s) if you wish to edit the code & test it in just a single category, otherwise it will watch all categories that the bot can view
 
 For this next section, it will assume you have a prefix set to `!`, since all staff-exclusive commands are prefix commands.
 - To view a list of all existing configs, use `!config view`
