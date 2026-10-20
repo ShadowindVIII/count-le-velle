@@ -91,15 +91,17 @@ class PublicCommands(commands.Cog):
 5. `!delete [user_id]` - Delete's a user's records from my database
 """
     else:
+      if os.environ['PRIVACY_POLICY_URL'] != "https://example.com":
+        privacy = f"\n\nMy Privacy Policy can be found [here]({os.environ['PRIVACY_POLICY_URL']})"
+      else:
+        privacy = ""
       embed.description = """Here's how you use my commands:
 1. `!help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
 2. `!level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
 3. `!level up` - Restore your level roles, if you had any and lost them
 4. `!wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
 5. `!leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
-6. `!optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels
-
-My privacy policy can be found at {os.environ['PRIVACY_POLICY_URL']}
+6. `!optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels{privacy}
 """
     embed.set_footer(text='Greetings. I am the Count. They call me the Count because I LOVE to count')
     await ctx.respond(embed=embed, ephemeral=True)
