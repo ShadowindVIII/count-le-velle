@@ -84,11 +84,11 @@ class PublicCommands(commands.Cog):
     embed = Embed(title=f'Help', color=0xab94ab)
     if options == 'staff':
       embed.description = f"""Here's how you use my commands:
-1. `!help` - Displays this message
-2. `!set [user_id] [value] [type]` - Replace a user's current `text` or `voice` experience with `value`
-3. `!award [user_id] [value] [type]` - Adds `value` to a user's `text` or `voice experience
-4. `!config [view/edit/add] `\`\`\`[parameters]\`\`\` - View/adjust configs. Configs that rarely/never change are located in `.env` on the host machine
-5. `!delete [user_id]` - Delete's a user's records from my database
+1. `{os.environ['PREFIX']}help` - Displays this message
+2. `{os.environ['PREFIX']}set [user_id] [value] [type]` - Replace a user's current `text` or `voice` experience with `value`
+3. `{os.environ['PREFIX']}award [user_id] [value] [type]` - Adds `value` to a user's `text` or `voice experience
+4. `{os.environ['PREFIX']}config [view/edit/add] `\`\`\`[parameters]\`\`\` - View/adjust configs. Configs that rarely/never change are located in `.env` on the host machine
+5. `{os.environ['PREFIX']}delete [user_id]` - Delete's a user's records from my database
 """
     else:
       if os.environ['PRIVACY_POLICY_URL'] != "https://example.com":
@@ -96,12 +96,12 @@ class PublicCommands(commands.Cog):
       else:
         privacy = ""
       embed.description = f"""Here's how you use my commands:
-1. `!help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
-2. `!level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
-3. `!level up` - Restore your level roles, if you had any and lost them
-4. `!wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
-5. `!leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
-6. `!optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels{privacy}
+1. `/help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
+2. `/level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
+3. `/restore` - Restore your level roles, if you had any and lost them
+4. `/wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
+5. `/leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
+6. `/optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels{privacy}
 """
     embed.set_footer(text='Greetings. I am the Count. They call me the Count because I LOVE to count')
     await ctx.respond(embed=embed, ephemeral=True)
