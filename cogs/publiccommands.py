@@ -206,7 +206,7 @@ class PublicCommands(commands.Cog):
   async def leaderboard(self, ctx: ApplicationContext,
                         range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
                         type: Option(str, 'Category of leaderboard you wish to view', default="Overall", name="type", choices=['Overall', 'Weekly', "Monthly"])):
-    await ctx.response.defer()
+    await ctx.response.defer(ephemeral=True)
     low, sep, high = range.partition("-")
     try:
       if sep:
@@ -214,12 +214,13 @@ class PublicCommands(commands.Cog):
       else:
         start, finish = 1, int(low)
     except ValueError:
-      await ctx.respond("Usage: `!leaderboard n` for the top `n` people or `!leaderboard 50-80` (capped at 30)")
+      await ctx.respond("Usage: `!leaderboard n` for the top `n` people or `!leaderboard 50-80` (capped at 30)", ephemeral=True)
       return
 
     if start < 1 or finish <= start or finish - start > 30:
       await ctx.respond(f"You cannot possibly expect me to count through such a range. "
-                        f"You shall specify it to me in the correct formatting (e.g. `10-25`) and may only request at most THIRTY results at a time. No more!")
+                        f"You shall specify it to me in the correct formatting (e.g. `10-25`) and may only request at most THIRTY results at a time. No more!",
+                        ephemeral=True)
       return
 
     skip = start - 1
@@ -246,7 +247,7 @@ class PublicCommands(commands.Cog):
       pipeline = self.recent_pipeline(30, skip, limit)
     else:
       await ctx.respond(f"I do not understand this \"{type}\" type of leaderboard you're talking about. "
-                        f"I only keep count of `Weekly` and `Monthly` leaderboards in addition to `Overall`.")
+                        f"I only keep count of `Weekly` and `Monthly` leaderboards in addition to `Overall`.", ephemeral=True)
       return
 
     description = "\n".join(
@@ -256,7 +257,7 @@ class PublicCommands(commands.Cog):
       for rank, doc in enumerate(db.aggregate(pipeline), start=start)
     )
     embed = Embed(title=f"{type} Leaderboard", description=description, color=0xA9BFBE)
-    await ctx.respond(embed=embed)
+    await ctx.respond(embed=embed, ephemeral=True)
 
   def recent_pipeline(self, days, skip, limit):
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
