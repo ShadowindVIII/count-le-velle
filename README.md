@@ -36,6 +36,7 @@ This section assumes a prefix command of `!`, change it accordingly. The followi
 - `!award [user_id] [value] <type>` - Adds `value` amount of experience to a person's existing exp. Edits `text` type of experience by default.
 - `!delete [user_id]` - Deletes all data associated with a user, as if they used `/optout` except without assigning them a "No Exp" role.
 - `!transfer [filename]` - Command for doing a one-time bulk write using a JSON from Gaius Play. This is specifically using the file requested from the owner of the bot, and left in in case anybody else is migrating from Gaius. The JSON should be in the root directory where `main.py` sits.
+- - **If you need to transfer a JSON, make sure to un-comment the `COPY` directive sitting in the Dockerfile when you build/run the bot so that the bot has access to it.**
 
 ### Editing Configs
 No role rewards exist in the config by default. By default, the following values will be used for operation:

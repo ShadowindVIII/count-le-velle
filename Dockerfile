@@ -9,6 +9,6 @@ RUN python -m pip install -r requirements.txt
 
 COPY main.py .
 COPY cogs cogs
-COPY *.json .
+#COPY *.json . #un-comment if you need to include a JSON for !transfer
 
 CMD ["python3", "main.py"]
