@@ -1,0 +1,10 @@
+name: levelbot
+
+services:
+  levelbot:
+    container_name: levelbot
+    image: levelbot:latest
+    env_file:
+      - .env
+    restart: unless-stopped
+
