@@ -30,11 +30,12 @@ class Admin(commands.Cog):
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"]))
 
-  @commands.slash_command(description="Check my latency")
+  @commands.command()
   @commands.guild_only()
-  async def ping(self, ctx: ApplicationContext):
+  @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
+  async def ping(self, ctx: commands.Context):
     init_text = 'Counting...'
-    msg = await ctx.respond(init_text, ephemeral=True)
+    msg = await ctx.send(init_text)
     delta_ms = ((ctx.message.created_at - msg.created_at).microseconds)/1000
     delta_s = abs(ctx.message.created_at - msg.created_at).seconds
     ping_text = 'Done counting! I responded in `%d.%03ds`' % (delta_s, delta_ms) + ' and have been running for ' + self.__uptime()
