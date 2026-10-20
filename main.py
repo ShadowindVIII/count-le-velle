@@ -8,7 +8,7 @@ import asyncio
 from cogs.admin import Admin
 from cogs.text import Text
 from cogs.voice import Voice
-from cogs.housekeeping import Housekeeping
+from cogs.publiccommands import PublicCommands
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import random
@@ -38,7 +38,7 @@ bot.remove_command('help')
 
 bot.add_cog(Text(bot, mongo))
 bot.add_cog(Voice(bot, mongo))
-bot.add_cog(Housekeeping(bot, mongo))
+bot.add_cog(PublicCommands(bot, mongo))
 bot.add_cog(Admin(bot, mongo))
 
 # **************
