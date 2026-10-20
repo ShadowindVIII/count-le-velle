@@ -159,12 +159,13 @@ class PublicCommands(commands.Cog):
   @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def level(self, ctx: ApplicationContext,
-                  option: Option(str, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
+                  option: Option(str|Member|User, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
     await ctx.response.defer(ephemeral=True)
-    try:
-      id = int(option)
-    except ValueError:
-      return await ctx.followup.send("Invalid user ID.", ephemeral=True)
+    if isinstance(option, str):
+      try:
+        id = int(option)
+      except ValueError:
+        return await ctx.followup.send("Invalid user ID.", ephemeral=True)
     if option in ["0", 0]:
       id = ctx.author.id
     elif isinstance(option, User) or isinstance(option, Member):
