@@ -1,6 +1,8 @@
-This bot relies on MongoDB Atlas for its database, and can be run in a docker container. This README assumes you already have a Discord bot created in the Developer Portal, or you know how to. You will need to enable the Message Content and Server Members privileged intents. Setup information can be found at the bottom of this README. 
+This bot relies on MongoDB Atlas for its database, and can be run in a docker container. This README assumes you know how to use Docker and either already have a Discord bot created in the Developer Portal, or that you know how to make one and configure it as needed. You will need to enable the Message Content and Server Members privileged intents in Discord's Developer Portal. 
 
-MongoDB is chosen for the database because it already stores data in an encrypted format, both at rest as well as in transit, because it is required by Discord's Developer TOS. Docker is chosen as it creates a virtual environment so your `.env` file is not easily accessible by other softwares that might be running on your host machine.
+Setup information can be found at the bottom of this README, starting at the Database section. 
+
+MongoDB is chosen for the database because it already stores data in an encrypted format, both at rest as well as in transit, because it is required by Discord's Developer TOS. Docker is chosen as it creates a virtual environment so your `.env` file is not easily accessible by other softwares that might be running on your host machine, and so that any dependencies (most notably, the lack thereof) gets handled by Docker.
 
 Please note that this software is presented to the public **as-is, with no guarantees or assurances if separate functionality or different functionality is desired**. I will try my best to explain the systems herein to allow the bot to work as-is, but I am still a human and this was built in a little over 2 weeks, with the bulk of that time being in the last 5 days, around the time that the Gaius bots and their owner got hacked.
 
@@ -25,7 +27,6 @@ Please note that this software is presented to the public **as-is, with no guara
 - - `threshold` (int) - the level that a role should be awarded at
 - - `role_id` (int) - the ID of the role which should be awarded. Please note that all roles have to be underneath the bot's highest role
 - - `message` (str) - a custom phrase enclosed in quotation marks that will be sent when a user unlocks a new role. Include `\n` if you wish to include line breaks. More info in the Editing Configs section.
-- 
 
 ### Editing Configs
 No role rewards exist in the config by default. By default, the following values will be used for operation:
@@ -80,13 +81,16 @@ You can manually edit your database entries in the dashboard under Database > Da
 The image for this bot is not posted on Docker Hub, you will have to build it after making all your changes to the code as you see fit. After you install Docker CE, you can run these in a terminal:
 
 ```
-cd /path/to/your/level-bot
+git clone git@github.com:ShadowindVIII/count-le-velle.git
+cd /path/to/your/count-le-velle
 docker build . -t levelbot
 ```
 
+To check on the status of the bot, use `docker ps` and to check for errors during compile use `docker logs levelbot` while it is running (or desperately trying to).
+
 It will be slow the first time you do it, and slow if you change/add any dependencies in `requirements.txt`. Unless you change the name of the tag from `levelbot`, you will not need to edit `docker-compose.yml`. What you will need to edit next is the `.env` file:
 - Paste your Discord bot's token copied from the Developer portal
-- The bot generates logs when it encounters runtime errors or when it starts/restarts. Choose a channel where you want these logs to collect and copy its role ID into `LOG_CHANNEL`
+- The bot generates logs when it encounters runtime errors or when it starts/restarts. Choose a channel where you want these logs to collect and copy its channel ID into `LOG_CHANNEL`
 - This bot is designed for running/existing in one server. Put the server's ID in `OPERATING_GUILD`
 - In its current form, the `STAFF_ROLE_ID` and `ADMIN_ROLE_ID` that you specify will both carry identical permissions. You can change this in the code if you want to. If you only need one role to hold elevated permissions, you can put the same ID in both fields or leave one as a dummy.
 - All publicly available commands are slash commands, while staff-only commands are prefix commands. Choose your prefix command and set it in `PREFIX`. Be aware that `=` as a prefix may cause problems due to the formatting that `.env` files use.
