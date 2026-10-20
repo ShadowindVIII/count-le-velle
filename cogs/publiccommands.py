@@ -8,6 +8,7 @@ from pymongo import ReturnDocument
 
 from datetime import datetime, timedelta, timezone
 
+from bson.int64 import Int64
 import io
 import json
 import os
@@ -158,8 +159,12 @@ class PublicCommands(commands.Cog):
   @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def level(self, ctx: ApplicationContext,
-                  option: Option(int, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
+                  option: Option(str, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
     await ctx.response.defer(ephemeral=True)
+    try:
+      id = int(option)
+    except ValueError:
+      return await ctx.followup.send("Invalid user ID.", ephemeral=True)
     if option in ["0", 0]:
       id = ctx.author.id
     elif isinstance(option, User) or isinstance(option, Member):
@@ -179,7 +184,7 @@ class PublicCommands(commands.Cog):
       return
     doc = self.users.find_one({"_id": id})
     if not doc:
-      await ctx.respond(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!", ephemeral=True)
+      await ctx.respond(f"It seems as though this `{option}` person has no experience data for me to count!", ephemeral=True)
       return
 
     current_level = doc.get("level", 0)
