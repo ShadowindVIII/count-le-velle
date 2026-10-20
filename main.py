@@ -70,7 +70,7 @@ async def print_error(error_string: str):
   logbook_channel = await bot.fetch_channel(os.environ['LOG_CHANNEL'])
   
   if len(error_string) <= 3900:
-    embed = discord.Embed(title="Error Log", description=f'```{error_string}```', color=0x976417)
+    embed = discord.Embed(title="Error Log", description=f'```{error_string}```', color=0xA9BFBE)
     await logbook_channel.send(embed=embed)
     return
   
@@ -88,7 +88,7 @@ async def print_error(error_string: str):
     parts.append(current_part)
   
   for i, part in enumerate(parts):
-    embed = discord.Embed(title=f"Error Log (Part `{i + 1}`/`{len(parts)}`)", description=f'```{part}```', color=4491263)
+    embed = discord.Embed(title=f"Error Log (Part `{i + 1}`/`{len(parts)}`)", description=f'```{part}```', color=0xA9BFBE)
     await logbook_channel.send(embed=embed)
 
 # For emergencies only 
@@ -97,15 +97,6 @@ async def print_error(error_string: str):
 async def crash(ctx: commands.Context):
   await ctx.send("done")
   await bot.close()
-
-@bot.command()
-async def ping(self, ctx: commands.Context):
-  init_text = 'Counting...'
-  msg = await ctx.reply(init_text)
-  delta_ms = ((ctx.message.created_at - msg.created_at).microseconds)/1000
-  delta_s = abs(ctx.message.created_at - msg.created_at).seconds
-  ping_text = 'Done counting! I responded in `%d.%03ds`' % (delta_s, delta_ms) + ' and have been running for ' + self.__uptime()
-  await msg.edit(content=ping_text)
 
 @bot.event
 async def on_ready():
@@ -118,8 +109,8 @@ async def on_ready():
   #  status = (startup_info[1]).strip()
   #  await bot.change_presence(activity=discord.CustomActivity(name=status))
   await bot.change_presence(activity=discord.CustomActivity(name=status))
-  embed = discord.Embed(title='\\*yaaaaaaawwwwn\\*', color=int(0xAAAAAA), description=f"""
-I have awoken.
+  embed = discord.Embed(title='\\*Hm?! Who goes there...?\\*', color=int(0xAAAAAA), description=f"""
+Who dares disturb my slumber on this wretched day?!
 Status: {status}
 My latency: `{round(bot.latency * 1000)}` ms""")
 

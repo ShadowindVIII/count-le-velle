@@ -75,12 +75,12 @@ class Voice(commands.Cog):
     self.users.update_one(
       {"_id": member_id},
       {"$set": {
-        "last_vc_join_time": joined,
         "vc_window_start": window_start,
         "vc_window_seconds": used + granted,
       }},
       upsert=True,
     )
+
     return timedelta(seconds=granted)
 
   async def refresh_channel(self, channel):
@@ -110,6 +110,7 @@ class Voice(commands.Cog):
       if ch is not None:
         await self.refresh_channel(ch)
 
+# this is just here in the small chance that the bot misses an API event related to VCs for any reason
   @tasks.loop(minutes=10)
   async def double_check(self):
     active = set()
@@ -127,9 +128,6 @@ class Voice(commands.Cog):
   async def before_double_check(self):
     await self.bot.wait_until_ready()
 
-
-# INTERNALS
-
   async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
     if recipient == 0 or type not in ["text", "voice"]:
       return
@@ -140,10 +138,19 @@ class Voice(commands.Cog):
       upsert=True,
       return_document=ReturnDocument.AFTER
     )
+
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    self.recent.update_one(
+      {"user": recipient, "date": today},
+      {"$inc": {type: amount}},
+      upsert=True
+    )
+
     if new_doc:
       await self.check(new_doc)
 
   def calculate(self, timedelta: timedelta = None):
+    # put whatever calculations you want here!
     return (self.VOICE_AWARD * (timedelta.total_seconds() // 60))
 
   async def check(self, doc):
@@ -154,7 +161,7 @@ class Voice(commands.Cog):
     needed_exp = 100
     while total_exp >= needed_exp:
       level += 1
-      needed_exp += 5 * level**2 + 50 * level
+      needed_exp += 5 * level**2 + 50 * level + 100
     current_level = level
 
     prev_level = doc.get("level")

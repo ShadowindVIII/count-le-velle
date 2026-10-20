@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from discord import Member, Status, User, Reaction, Message, Embed
+from discord import Member, Status, User, Reaction, Message, Embed, ApplicationContext, Option
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -16,7 +16,10 @@ class Text(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
     self.bot = bot
     self.users = mongo.database.users
+    self.recent = mongo.database.recent
     self.config = mongo.database.config
+    self.recent.create_index([("user", 1), ("date", 1)], unique=True)
+    self.recent.create_index("date", expireAfterSeconds=30 * 86400)
     self.update_database()
 
   @commands.Cog.listener()
@@ -75,52 +78,57 @@ class Text(commands.Cog):
 # ------------------
 # ------------------
 
-  @commands.command()
+  @commands.slash_command(description="Wear a new level role for its icon/color")
   @commands.guild_only()
-  @commands.cooldown(3, 60 * 60, commands.BucketType.user)
-  async def wear(self, ctx: commands.Context, *, role_name: str):
+  @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
+  async def wear(self, ctx: ApplicationContext, 
+                 role_name: Option(str, 'Name of the role you would like to equip.', default=None, name="role_name")):
     role = discord.utils.find(
       lambda r: r.name.casefold() == role_name.casefold(),
       self.guild.roles,
     )
     match = next((t for t in self.roles if role and t[1] == role.id), None)
     if not match:
-      await ctx.send(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".")
+      await ctx.respond(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".", ephemeral=True)
       return
 
     doc = self.users.find_one({"_id": ctx.author.id}) or {}
     if match[0] > doc.get("level", 0):
-      await ctx.send("I have counted every experience point you have, and determined you have not reached the level required for that role.")
+      await ctx.respond("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
       return
 
     thresholds = {t[1]: t[0] for t in self.roles}
     to_remove = [
       r for r in ctx.author.roles
-      if r.id in thresholds and thresholds[r.id] < match[0]
+      if r.id in thresholds and r.id != role.id
     ]
     if to_remove:
       await ctx.author.remove_roles(*to_remove)
     if role not in ctx.author.roles:
       await ctx.author.add_roles(role)
 
-    await ctx.send("You are hereby awarded the role you seek.")
+    await ctx.respond("You are hereby awarded the role you seek.", ephemeral=True)
     self.users.update_one(
       {"_id": ctx.author.id},
       {"$set": {"preference": role.id}},
       upsert=True,
     )
 
-  @commands.command(aliases=['levelle'])
+  @commands.slash_command(description='Restore your level roles/permissions.')
   @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
-  async def level(self, ctx: commands.Context, option: int|User|Member|str = 0):
-    if  option == "up":
-      doc = self.users.find_one({"_id": ctx.author.id})
-      if doc:
-        await self.check(doc)
-        await ctx.send("Successfully counted every last experience point and awarded you with the associated roles.")
-      return
+  async def restore(self, ctx: ApplicationContext):
+    doc = self.users.find_one({"_id": ctx.author.id})
+    if doc:
+      await self.check(doc)
+      await ctx.respond("Successfully counted every last experience point and awarded you with the associated roles.", ephemeral=True)
 
+  @commands.slash_command(aliases=['levelle'], description="Check your level or somebody else's")
+  @commands.guild_only()
+  @commands.cooldown(1, COMMAND_COOLDOWN)
+  async def level(self, ctx: ApplicationContext, 
+                  option: Option(int, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
+    await ctx.response.defer(ephemeral=True)
     if option == 0:
       id = ctx.author.id
     elif isinstance(option, User) or isinstance(option, Member):
@@ -129,19 +137,19 @@ class Text(commands.Cog):
       id = option
 
     try:
-      user = await self.guild.fetch_member(id)
+      user = await self.guild.fetch_member(id) 
     except discord.NotFound:
       user = None
     except discord.HTTPException:
       user = None
 
     if not id or not user:
-      await ctx.send(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!")
+      await ctx.respond(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!", ephemeral=True)
       return
 
     doc = self.users.find_one({"_id": id})
     if not doc:
-      await ctx.send(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!")
+      await ctx.respond(f"I have thoroughly checked every tome and scroll in my library and found none for this `{option}` person!", ephemeral=True)
       return
 
     current_level = doc.get("level", 0)
@@ -152,21 +160,24 @@ class Text(commands.Cog):
     embed.add_field(name='Total EXP', value=current_exp, inline=True)
     embed.add_field(name='Level', value=current_level, inline=True)
 
-    old_exp = self.exp_for_level(doc.get("level", 0) - 1)
+    old_exp = self.exp_for_level(doc.get("level", 0) - 1) 
     next_exp = self.exp_for_level(doc.get("level", 0) + 1)
-    progress = (current_exp - old_exp) / (next_exp - old_exp) * 100
+    progress = ((current_exp - old_exp) / (next_exp - old_exp)) * 100
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
     embed.add_field(name='Next Role', value=next((f'<@&{r}>' for t, r, m in self.roles if t > current_level), 'None!'), inline=True)
 
     embed.set_footer(text="TIP: Commands do not grant experience points.")
-    await ctx.send(embed=embed)
+    await ctx.respond(embed=embed, ephemeral=True)
 
 
 
-  @commands.command()
+  @commands.slash_command(description="Check out the weekly, monthly, or overall leaderboards!")
   @commands.guild_only()
   @commands.cooldown(1, COMMAND_COOLDOWN)
-  async def leaderboard(self, ctx, range: str = "10"):
+  async def leaderboard(self, ctx: ApplicationContext,
+                        range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
+                        type: Option(str, 'Category of leaderboard you wish to view', default="Overall", name="type", choices=['Overall', 'Weekly', "Monthly"])):
+    await ctx.response.defer()
     low, sep, high = range.partition("-")
     try:
       if sep:
@@ -174,35 +185,47 @@ class Text(commands.Cog):
       else:
         start, finish = 1, int(low)
     except ValueError:
-      await ctx.send("Usage: `!leaderboard n` for the top `n` people or `!leaderboard 50-80` (capped at 30)")
+      await ctx.respond("Usage: `!leaderboard n` for the top `n` people or `!leaderboard 50-80` (capped at 30)")
       return
 
     if start < 1 or finish <= start or finish - start > 30:
-      await ctx.send(f"You cannot possibly expect me to count through such a range. You shall specify it to me in the correct formatting (e.g. `10-25`) and may only request at most THIRTY results at a time. No more!")
+      await ctx.respond(f"You cannot possibly expect me to count through such a range. You shall specify it to me in the correct formatting (e.g. `10-25`) and may only request at most THIRTY results at a time. No more!")
       return
 
     skip = start - 1
     limit = finish - start + 1
-    pipeline = [
-      {"$addFields": {
-        "total_exp": {"$add": [
-          {"$ifNull": ["$text", 0]},
-          {"$ifNull": ["$voice", 0]},
-        ]}
-      }},
-      {"$sort": {"total_exp": -1}},
-      {"$skip": skip},
-      {"$limit": limit},
-    ]
+
+    if type == "Overall":
+      db = self.users
+      pipeline = [
+        {"$addFields": {
+          "total_exp": {"$add": [
+            {"$ifNull": ["$text", 0]},
+            {"$ifNull": ["$voice", 0]},
+          ]}
+        }},
+        {"$sort": {"total_exp": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+      ]
+    elif type == "Weekly":
+      db = self.recent
+      pipeline = self.recent_pipeline(7, skip, limit)
+    elif type == "Monthly":
+      db = self.recent
+      pipeline = self.recent_pipeline(30, skip, limit)
+    else:
+      await ctx.respond("I do not understand this \"{type}\" type of leaderboard you're talking about. I only keep count of `weekly` and `monthly` in addition to `overall`.")
+      return
 
     description = "\n".join(
       f'{rank}. <@{doc["_id"]}> Level `{doc.get("level", 0)}` '
       f'- **{doc.get("text", 0) + doc.get("voice", 0)}** Total '
       f'(**{doc.get("text", 0)}** Text / **{doc.get("voice", 0)}** VC)'
-      for rank, doc in enumerate(self.users.aggregate(pipeline), start=start)
+      for rank, doc in enumerate(db.aggregate(pipeline), start=start)
     )
-    embed = Embed(title="Leaderboard", description=description, color=0xA9BFBE)
-    await ctx.send(embed=embed)
+    embed = Embed(title=f"{type} Leaderboard", description=description, color=0xA9BFBE)
+    await ctx.respond(embed=embed)
 
 
 # -----------------
@@ -221,6 +244,14 @@ class Text(commands.Cog):
       upsert=True,
       return_document=ReturnDocument.AFTER
     )
+
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    self.recent.update_one(
+      {"user": recipient, "date": today},
+      {"$inc": {type: amount}},
+      upsert=True
+    )
+
     if new_doc:
       await self.check(new_doc)
 
@@ -235,7 +266,7 @@ class Text(commands.Cog):
     needed_exp = 100
     while total_exp >= needed_exp:
       level += 1
-      needed_exp += 5 * level**2 + 50 * level
+      needed_exp += 5 * level**2 + 50 * level + 100
     current_level = level
 
     prev_level = doc.get("level")
@@ -247,20 +278,50 @@ class Text(commands.Cog):
         except discord.Forbidden:
           pass
 
-    user_role_list = [role.id for role in user.roles]
-    for threshold, role_id, message in self.roles:
-      if current_level >= threshold and role_id not in user_role_list:
-        role = self.guild.get_role(role_id)
-        if not role:
-          role = await self.guild.fetch_role(role_id)
-        if int(doc.get("preference", None)):
-          continue
-        await user.add_roles(role)
-        await user.send(message.strip("\""))
+    eligible = [t for t in self.roles if current_level >= t[0]]
+    if not eligible:
+      return
+
+    pref_id = doc.get("preference")
+    pref = next((t for t in eligible if t[1] == pref_id), None)
+    target = pref or max(eligible, key=lambda t: t[0])
+
+    role = self.guild.get_role(target[1])
+    if not role:
+      role = await self.guild.fetch_role(target[1])
+
+    level_role_ids = {t[1] for t in self.roles}
+    to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
+    if to_remove:
+      await user.remove_roles(*to_remove)
+
+    if role not in user.roles:
+      await user.add_roles(role)
+      if not pref:
+        try:
+          await user.send(target[2].strip("\"").replace("\\n","\n"))
+        except discord.Forbidden:
+          pass
 
 
   def exp_for_level(self, n: int = 0):
     if n <= 0:
       return 0
     return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
+
+  def recent_pipeline(self, days, skip, limit):
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff = today - timedelta(days=days - 1)
+    return [
+      {"$match": {"date": {"$gte": cutoff}}},
+      {"$group": {
+        "_id": "$user",
+        "text": {"$sum": "$text"},
+        "voice": {"$sum": "$voice"},
+      }},
+      {"$addFields": {"total_exp": {"$add": ["$text", "$voice"]}}},
+      {"$sort": {"total_exp": -1, "_id": 1}},
+      {"$skip": skip},
+      {"$limit": limit},
+    ]
 
