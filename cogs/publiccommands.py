@@ -160,7 +160,7 @@ class PublicCommands(commands.Cog):
   async def level(self, ctx: ApplicationContext,
                   option: Option(int, 'ID of the user you wish to check. Leave blank to view your level.', default=0, name="user")):
     await ctx.response.defer(ephemeral=True)
-    if option == 0:
+    if option in ["0", 0]:
       id = ctx.author.id
     elif isinstance(option, User) or isinstance(option, Member):
       id = option.id
