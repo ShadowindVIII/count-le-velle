@@ -205,7 +205,7 @@ class PublicCommands(commands.Cog):
   @commands.cooldown(1, COMMAND_COOLDOWN)
   async def leaderboard(self, ctx: ApplicationContext,
                         range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
-                        type: Option(str, 'Category of leaderboard you wish to view', default="Overall", name="type", choices=['Overall', 'Weekly', "Monthly"])):
+                        type: Option(str, 'Category of leaderboard you wish to view', default="All Time", name="type", choices=['Overall', 'Weekly', "Monthly"])):
     await ctx.response.defer(ephemeral=True)
     low, sep, high = range.partition("-")
     try:
@@ -226,7 +226,7 @@ class PublicCommands(commands.Cog):
     skip = start - 1
     limit = finish - start + 1
 
-    if type == "Overall":
+    if type == "All Time":
       db = self.users
       pipeline = [
         {"$addFields": {
@@ -247,7 +247,7 @@ class PublicCommands(commands.Cog):
       pipeline = self.recent_pipeline(30, skip, limit)
     else:
       await ctx.respond(f"I do not understand this \"{type}\" type of leaderboard you're talking about. "
-                        f"I only keep count of `Weekly` and `Monthly` leaderboards in addition to `Overall`.", ephemeral=True)
+                        f"I only keep count of `Weekly` and `Monthly` leaderboards in addition to `All Time`.", ephemeral=True)
       return
 
     description = "\n".join(

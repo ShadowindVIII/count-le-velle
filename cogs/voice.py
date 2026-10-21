@@ -16,6 +16,7 @@ class Voice(commands.Cog):
     self.bot = bot
     self.users = mongo.database.users
     self.vc = mongo.database.vc
+    self.recent = mongo.database.recent
     self.config = mongo.database.config
     self.update_database()
 
@@ -30,8 +31,6 @@ class Voice(commands.Cog):
     self.update_database()
 
   def update_database(self):
-    self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
-    self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
     self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
     self.VC_CONCURRENT_MEMBERS = int((self.config.find_one({"setting": "vc_concurrent_members"}))["value"].get("value", 2))
     self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
