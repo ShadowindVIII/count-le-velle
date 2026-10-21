@@ -205,7 +205,8 @@ class PublicCommands(commands.Cog):
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def leaderboard(self, ctx: ApplicationContext,
                         range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
-                        type: Option(str, 'Category of leaderboard you wish to view', default="All Time", name="type", choices=['Overall', 'Weekly', "Monthly"])):
+                        timespan: Option(str, 'Timespan you wish to view', default="All Time", name="timespan", choices=['All Time', 'Weekly', "Monthly"]),
+                        sort_type: Option(str, 'Method you wish to use to sort the leaderboard', default='Voice & Text', name="sort_type", choices=['Voice & Text', "Around Me", "Voice", "Text"])):
     await ctx.response.defer(ephemeral=True)
     low, sep, high = range.partition("-")
     try:
@@ -226,53 +227,27 @@ class PublicCommands(commands.Cog):
     skip = start - 1
     limit = finish - start + 1
 
-    if type == "All Time":
-      db = self.users
-      pipeline = [
-        {"$addFields": {
-          "total_exp": {"$add": [
-            {"$ifNull": ["$text", 0]},
-            {"$ifNull": ["$voice", 0]},
-          ]}
-        }},
-        {"$sort": {"total_exp": -1}},
-        {"$skip": skip},
-        {"$limit": limit},
-      ]
-    elif type == "Weekly":
-      db = self.recent
-      pipeline = self.recent_pipeline(7, skip, limit)
-    elif type == "Monthly":
-      db = self.recent
-      pipeline = self.recent_pipeline(30, skip, limit)
-    elif type == "VC":
-      db = self.users
-      pipeline = [
-        {"$addFields": {"total_exp": {"$ifNull": ["$voice", 0]}}},
-        {"$sort": {"total_exp": -1}},
-        {"$skip": skip},
-        {"$limit": limit},
-      ]
-    elif type == "Text":
-      db = self.users
-      pipeline = [
-        {"$addFields": {"total_exp": {"$ifNull": ["$text", 0]}}},
-        {"$sort": {"total_exp": -1}},
-        {"$skip": skip},
-        {"$limit": limit},
-      ]
+    if sort_type == "Around Me":
+      db, first_rank, pipeline = self.around_me_pipeline(timespan, ctx.author.id, limit)
+      if db is not None and pipeline is None:
+        await ctx.respond("No EXP recorded in this timespan.", ephemeral=True)
+        return
     else:
-      await ctx.respond(f"I do not understand this \"{type}\" type of leaderboard you're talking about. "
-                        f"I only keep count of `Weekly` and `Monthly` leaderboards in addition to `All Time`.", ephemeral=True)
+      db, pipeline = self.build_pipeline(timespan, sort_type, skip, limit)
+      first_rank = start
+
+    if db is None:
+      await ctx.respond("I do not understand this type of leaderboard you're talking about. I only keep count of `Weekly` and `Monthly` leaderboards in addition to `All Time`.", ephemeral=True)
       return
 
-    description = "\n".join(
-      f'{rank}. <@{doc["_id"]}> Level `{doc.get("level", 0)}` '
-      f'- **{doc.get("text", 0) + doc.get("voice", 0)}** Total '
-      f'(**{doc.get("text", 0)}** Text / **{doc.get("voice", 0)}** VC)'
-      for rank, doc in enumerate(db.aggregate(pipeline), start=start)
-    )
-    embed = Embed(title=f"{type} Leaderboard", description=description, color=0xA9BFBE)
+    lines = []
+    for rank, doc in enumerate(db.aggregate(pipeline), start=first_rank):
+      text = doc.get("text", 0)
+      voice = doc.get("voice", 0)
+      level = f' Level `{doc.get("level", 0)}`' if timespan == "All Time"  else ""
+      lines.append(f'{rank}. <@{doc["_id"]}>{level} - **{text + voice}** Total (**{text}** Text / **{voice}** VC)')
+
+    embed = Embed(title=f"{timespan} Leaderboard ({sort_type})", description="\n".join(lines) or "No results.", color=0xA9BFBE)
     await ctx.respond(embed=embed, ephemeral=True)
 
   def recent_pipeline(self, days, skip, limit):
@@ -286,6 +261,75 @@ class PublicCommands(commands.Cog):
         "voice": {"$sum": "$voice"},
       }},
       {"$addFields": {"total_exp": {"$add": ["$text", "$voice"]}}},
+      {"$sort": {"total_exp": -1, "_id": 1}},
+      {"$skip": skip},
+      {"$limit": limit},
+    ]
+
+  def base_stages(self, timespan):
+    if timespan == "All Time":
+      return self.users, []
+    elif timespan == "Weekly":
+      days = 7
+    elif timespan == "Monthly":
+      days = 30
+    else:
+      return None, None
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff = today - timedelta(days=days - 1)
+    return self.recent, [
+      {"$match": {"date": {"$gte": cutoff}}},
+      {"$group": {
+        "_id": "$user",
+        "text": {"$sum": "$text"},
+        "voice": {"$sum": "$voice"},
+      }},
+    ]
+
+  def build_pipeline(self, timespan, sort_type, skip, limit):
+    collection, base = self.base_stages(timespan)
+    options = {
+      "Voice & Text": {"$add": [
+        {"$ifNull": ["$text", 0]},
+        {"$ifNull": ["$voice", 0]},
+      ]},
+      "Voice": {"$ifNull": ["$voice", 0]},
+      "Text": {"$ifNull": ["$text", 0]}
+    }
+    exp = options.get(sort_type)
+    if collection is None or exp is None or sort_type == "Around Me":
+      return None, None
+    return collection, base + [
+      {"$addFields": {"total_exp": exp}},
+      {"$sort": {"total_exp": -1, "_id": 1}},
+      {"$skip": skip},
+      {"$limit": limit},
+    ]
+
+  def around_me_pipeline(self, timespan, user_id, limit):
+    collection, base = self.base_stages(timespan)
+    if collection is None:
+      return None, None, None
+    scored = base + [{"$addFields": {"total_exp": {"$add": [{"$ifNull": ["$text", 0]},{"$ifNull": ["$voice", 0]}]}}}]
+
+    me = list(collection.aggregate(scored + [{"$match": {"_id": user_id}}]))
+    if not me:
+      return collection, None, None
+    user_total = me[0]["total_exp"]
+
+    before = list(collection.aggregate(scored + [
+      {"$match": {"$expr": {"$or": [
+        {"$gt": ["$total_exp", user_total]},
+        {"$and": [
+          {"$eq": ["$total_exp", user_total]},
+          {"$lt": ["$_id", user_id]},
+        ]},
+      ]}}},
+      {"$count": "n"},
+    ]))
+    index = before[0]["n"] if before else 0
+    skip = max(0, index - limit // 2)
+    return collection, index + 1, scored + [
       {"$sort": {"total_exp": -1, "_id": 1}},
       {"$skip": skip},
       {"$limit": limit},
