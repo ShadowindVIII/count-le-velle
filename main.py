@@ -62,6 +62,8 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 
 @bot.event
 async def on_application_command_error(ctx: commands.Context, error: commands.CommandError):
+  if isinstance(error, commands.CommandOnCooldown):
+    return #(already handled in cogs/publiccommands.py)
   await print_error(f"application command error: {error}")
 
 async def print_error(error_string: str):
