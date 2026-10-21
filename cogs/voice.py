@@ -33,7 +33,7 @@ class Voice(commands.Cog):
   def update_database(self):
     self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
     self.VC_CONCURRENT_MEMBERS = int((self.config.find_one({"setting": "vc_concurrent_members"}))["value"].get("value", 2))
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
     self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("hours", 2))
@@ -172,12 +172,27 @@ class Voice(commands.Cog):
         except discord.Forbidden:
           pass
 
-    user_role_list = [role.id for role in user.roles]
-    for threshold, role_id, message in self.roles:
-      if current_level >= threshold and role_id not in user_role_list:
-        role = self.guild.get_role(role_id)
-        if not role:
-          role = await self.guild.fetch_role(role_id)
-        await user.add_roles(role)
-        await user.send(message.strip("\""))
+    eligible = [t for t in self.roles if current_level >= t[0]]
+    if not eligible:
+      return
 
+    pref_id = doc.get("preference")
+    pref = next((t for t in eligible if t[1] == pref_id), None)
+    target = pref or max(eligible, key=lambda t: t[0])
+
+    role = self.guild.get_role(target[1])
+    if not role:
+      role = await self.guild.fetch_role(target[1])
+
+    level_role_ids = {t[1] for t in self.roles if not t[3]}
+    to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
+    if to_remove:
+      await user.remove_roles(*to_remove)
+
+    if role not in user.roles:
+      await user.add_roles(role)
+      if not pref:
+        try:
+          await user.send(target[2].strip("\"").replace("\\n","\n"))
+        except discord.Forbidden:
+          pass

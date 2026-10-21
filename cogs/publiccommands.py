@@ -75,7 +75,7 @@ class PublicCommands(commands.Cog):
     await ctx.respond('Opting out will delete all your experience data. Are you sure you want to do this?', view=OptOutView(self, ctx.author), ephemeral=True)
 
   def update_database(self):
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"]) for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
 
@@ -129,7 +129,7 @@ class PublicCommands(commands.Cog):
       await ctx.respond("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
       return
 
-    thresholds = {t[1]: t[0] for t in self.roles}
+    thresholds = {t[1]: t[0] for t in self.roles if not t[3]}
     to_remove = [
       r for r in ctx.author.roles
       if r.id in thresholds and r.id != role.id
@@ -331,7 +331,7 @@ class PublicCommands(commands.Cog):
     if not role:
       role = await self.guild.fetch_role(target[1])
 
-    level_role_ids = {t[1] for t in self.roles}
+    level_role_ids = {t[1] for t in self.roles if not t[3]}
     to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
     if to_remove:
       await user.remove_roles(*to_remove)

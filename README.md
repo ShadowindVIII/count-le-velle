@@ -67,10 +67,13 @@ Here is an example for creating role rewards (please note that all role reward-r
 ~~~
 !config add reward_A ```threshold=5
 role_id=1234567890
-message="Congratulations! You've leveled up enough to receive a reward. You now have the permissions to:\n- Attach Files\n- Embed Links"```
+message="Congratulations! You've leveled up enough to receive a reward. You now have the permissions to:\n- Attach Files\n- Embed Links"
+persistent=True```
 ~~~
 
 Because newlines will tell the bot that you're creating a new `key=value` pair, in order to insert newlines into the custom message you need to use `\n`. Quotation marks will be stripped.
+
+The `persistent` option will specify whether you want the role to always remain enabled once a person reaches `threshold`, or whether you want users to be able to remove it with `/wear`.
 
 # Database
 Head over to MongoDB's website and look for Atlas. Once you make an account and create an organization, make a New Project, name it, and invite anybody you want to entrust with database access by email. 
