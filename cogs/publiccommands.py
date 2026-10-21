@@ -14,6 +14,7 @@ import json
 import os
 import dotenv
 
+GUILD = int(os.environ['OPERATING_GUILD'])
 COMMAND_COOLDOWN = os.environ['COMMAND_COOLDOWN']
 
 class OptOutView(discord.ui.View):
@@ -79,8 +80,7 @@ class PublicCommands(commands.Cog):
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
 
-  @commands.slash_command(description="View the commands I can run")
-  @commands.guild_only()
+  @commands.slash_command(description="View the commands I can run", guild_ids=[GUILD], guild_only=True)
   async def help(self, ctx: ApplicationContext, options: Option(str, 'View other categories of help. Leave blank if you\'re not staff.', default=None, name="options")):
     embed = Embed(title=f'Help', color=0xab94ab)
     if options == 'staff':
@@ -109,8 +109,7 @@ class PublicCommands(commands.Cog):
 
 
 
-  @commands.slash_command(description="Wear a new level role for its icon/color")
-  @commands.guild_only()
+  @commands.slash_command(description="Wear a new level role for its icon/color", guild_ids=[GUILD], guild_only=True)
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def wear(self, ctx: ApplicationContext,
                  role_name: Option(str, 'Name of the role you would like to equip.', default=None, name="role_name")):
@@ -146,8 +145,7 @@ class PublicCommands(commands.Cog):
       upsert=True,
     )
 
-  @commands.slash_command(description='Restore your level roles/permissions.')
-  @commands.guild_only()
+  @commands.slash_command(description='Restore your level roles/permissions.', guild_ids=[GUILD], guild_only=True)
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def restore(self, ctx: ApplicationContext):
     doc = self.users.find_one({"_id": ctx.author.id})
@@ -155,8 +153,7 @@ class PublicCommands(commands.Cog):
       await self.check(doc)
       await ctx.respond("Successfully counted every last experience point and awarded you with the associated roles.", ephemeral=True)
 
-  @commands.slash_command(aliases=['levelle'], description="Check your level or somebody else's")
-  @commands.guild_only()
+  @commands.slash_command(description="Check your level or somebody else's", guild_ids=[GUILD], guild_only=True)
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def level(self, ctx: ApplicationContext,
                   option: Option(str, 'ID of the user you wish to check. Leave blank to view your level.', default="0", name="user")):
@@ -200,8 +197,7 @@ class PublicCommands(commands.Cog):
 
 
 
-  @commands.slash_command(description="Check out the weekly, monthly, or overall leaderboards!")
-  @commands.guild_only()
+  @commands.slash_command(description="Check out the weekly, monthly, or overall leaderboards!", guild_ids=[GUILD], guild_only=True)
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def leaderboard(self, ctx: ApplicationContext,
                         range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
@@ -249,22 +245,6 @@ class PublicCommands(commands.Cog):
 
     embed = Embed(title=f"{timespan} Leaderboard ({sort_type})", description="\n".join(lines) or "No results.", color=0xA9BFBE)
     await ctx.respond(embed=embed, ephemeral=True)
-
-  def recent_pipeline(self, days, skip, limit):
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    cutoff = today - timedelta(days=days - 1)
-    return [
-      {"$match": {"date": {"$gte": cutoff}}},
-      {"$group": {
-        "_id": "$user",
-        "text": {"$sum": "$text"},
-        "voice": {"$sum": "$voice"},
-      }},
-      {"$addFields": {"total_exp": {"$add": ["$text", "$voice"]}}},
-      {"$sort": {"total_exp": -1, "_id": 1}},
-      {"$skip": skip},
-      {"$limit": limit},
-    ]
 
   def base_stages(self, timespan):
     if timespan == "All Time":
