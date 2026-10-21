@@ -148,7 +148,7 @@ class PublicCommands(commands.Cog):
 
   @commands.slash_command(description='Restore your level roles/permissions.')
   @commands.guild_only()
-  @commands.cooldown(1, COMMAND_COOLDOWN)
+  @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def restore(self, ctx: ApplicationContext):
     doc = self.users.find_one({"_id": ctx.author.id})
     if doc:
@@ -157,7 +157,7 @@ class PublicCommands(commands.Cog):
 
   @commands.slash_command(aliases=['levelle'], description="Check your level or somebody else's")
   @commands.guild_only()
-  @commands.cooldown(1, COMMAND_COOLDOWN)
+  @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def level(self, ctx: ApplicationContext,
                   option: Option(str, 'ID of the user you wish to check. Leave blank to view your level.', default="0", name="user")):
     await ctx.response.defer(ephemeral=True)
@@ -202,7 +202,7 @@ class PublicCommands(commands.Cog):
 
   @commands.slash_command(description="Check out the weekly, monthly, or overall leaderboards!")
   @commands.guild_only()
-  @commands.cooldown(1, COMMAND_COOLDOWN)
+  @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def leaderboard(self, ctx: ApplicationContext,
                         range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
                         type: Option(str, 'Category of leaderboard you wish to view', default="All Time", name="type", choices=['Overall', 'Weekly', "Monthly"])):
@@ -349,3 +349,10 @@ class PublicCommands(commands.Cog):
     if n <= 0:
       return 0
     return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
+
+  @commands.Cog.listener()
+  async def on_application_command_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+      await ctx.respond(f"You cannot expect me to respond that fast after you just ran this command. Try again in {error.retry_after:.1f}s.", ephemeral=True,)
+    else:
+      raise error
