@@ -245,6 +245,22 @@ class PublicCommands(commands.Cog):
     elif type == "Monthly":
       db = self.recent
       pipeline = self.recent_pipeline(30, skip, limit)
+    elif type == "VC":
+      db = self.users
+      pipeline = [
+        {"$addFields": {"total_exp": {"$ifNull": ["$voice", 0]}}},
+        {"$sort": {"total_exp": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+      ]
+    elif type == "Text":
+      db = self.users
+      pipeline = [
+        {"$addFields": {"total_exp": {"$ifNull": ["$text", 0]}}},
+        {"$sort": {"total_exp": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+      ]
     else:
       await ctx.respond(f"I do not understand this \"{type}\" type of leaderboard you're talking about. "
                         f"I only keep count of `Weekly` and `Monthly` leaderboards in addition to `All Time`.", ephemeral=True)
@@ -351,7 +367,7 @@ class PublicCommands(commands.Cog):
     return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
 
   @commands.Cog.listener()
-  async def on_application_command_error(ctx, error):
+  async def on_application_command_error(self, ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
       await ctx.respond(f"You cannot expect me to respond that fast after you just ran this command. Try again in {error.retry_after:.1f}s.", ephemeral=True,)
     else:
