@@ -25,6 +25,7 @@ class Admin(commands.Cog):
     self.bot = bot
     self.database = mongo.database
     self.users = mongo.database.users
+    self.start_time = discord.utils.utcnow()
 
   @commands.Cog.listener()
   async def on_ready(self):
@@ -38,7 +39,7 @@ class Admin(commands.Cog):
     msg = await ctx.send(init_text)
     delta_ms = ((ctx.message.created_at - msg.created_at).microseconds)/1000
     delta_s = abs(ctx.message.created_at - msg.created_at).seconds
-    ping_text = 'Done counting! I responded in `%d.%03ds`' % (delta_s, delta_ms) + ' and have been running for ' + self.__uptime()
+    ping_text = 'Done counting! I responded in `%d.%03ds`' % (delta_s, delta_ms) + ' and have been running for ' + self.uptime()
     await msg.edit(content=ping_text)
 
   @commands.command()
@@ -155,6 +156,22 @@ class Admin(commands.Cog):
 
     await self.check(new_doc)
     await ctx.send(content=f"Successfully added **{amount}** to <@{recipient}>'s **{type}** experience.",allowed_mentions=discord.AllowedMentions.none())
+
+
+  async def check(self, doc):
+    user = await self.guild.fetch_member(doc["_id"])
+    total_exp = doc.get("text", 0) + doc.get("voice", 0)
+
+    level = 0
+    needed_exp = 100
+    while total_exp >= needed_exp:
+      level += 1
+      needed_exp += 5 * level**2 + 50 * level + 100
+    current_level = level
+
+    prev_level = doc.get("level")
+    if prev_level != current_level:
+      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
 
   @commands.command()
   @commands.guild_only()
@@ -290,17 +307,17 @@ class Admin(commands.Cog):
       except AttributeError:
         pass
 
-  async def check(self, doc):
-    user = await self.guild.fetch_member(doc["_id"])
-    total_exp = doc.get("text", 0) + doc.get("voice", 0)
+  def uptime(self) -> str:
+        now = discord.utils.utcnow()
+        delta = now - self.start_time
+        hours, remainder = divmod(int(delta.total_seconds()), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        days, hours = divmod(hours, 24)
 
-    level = 0
-    needed_exp = 100
-    while total_exp >= needed_exp:
-      level += 1
-      needed_exp += 5 * level**2 + 50 * level + 100
-    current_level = level
+        fmt = "{h}h {m}m {s}s`"
+        if days:
+            fmt = "`{d}d " + fmt
+        else:
+          fmt = "`" + fmt
 
-    prev_level = doc.get("level")
-    if prev_level != current_level:
-      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
+        return fmt.format(d=days, h=hours, m=minutes, s=seconds)
