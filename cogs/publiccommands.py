@@ -71,7 +71,7 @@ class PublicCommands(commands.Cog):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"])) 
     self.update_database()
 
-  @commands.slash_command(description='Delete all your experience data and opt out from receiving any more', guild_ids=[GUILD], guild_only=True)
+  @commands.slash_command(description='Delete all your experience data and opt out from receiving any more', guild_ids=[GUILD])
   async def optout(self, ctx: ApplicationContext):
     await ctx.respond('Opting out will delete all your experience data. Are you sure you want to do this?', view=OptOutView(self, ctx.author), ephemeral=True)
 
