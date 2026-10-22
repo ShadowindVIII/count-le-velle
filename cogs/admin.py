@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import Member, Status, User, Reaction, Message, ApplicationContext, Option, File
+from discord import Member, Status, User, Reaction, Message, ApplicationContext, Option, File, TextChannel, VoiceChannel, StageChannel, Thread
 
 import os
 import dotenv
