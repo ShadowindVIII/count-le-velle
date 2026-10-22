@@ -76,7 +76,7 @@ class PublicCommands(commands.Cog):
     await ctx.respond('Opting out will delete all your experience data. Are you sure you want to do this?', view=OptOutView(self, ctx.author), ephemeral=True)
 
   def update_database(self):
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
 
@@ -107,12 +107,16 @@ class PublicCommands(commands.Cog):
     embed.set_footer(text='Greetings. I am the Count. They call me the Count because I LOVE to count')
     await ctx.respond(embed=embed, ephemeral=True)
 
-
+  async def construct_role_list(ctx: discord.AutocompleteContext):
+    id = ctx.interaction.user.id
+    current_level = ctx.cog.users.find_one({"_id": id})
+    typed = ctx.value.lower()
+    return [t[2] for t in ctx.cog.roles if t[2].lower().startswith(typed) and not t[4] and current_level.get("level", 0) >= t[0]]
 
   @commands.slash_command(description="Wear a new level role for its icon/color", guild_ids=[GUILD])
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def wear(self, ctx: ApplicationContext,
-                 role_name: Option(str, 'Name of the role you would like to equip.', default=None, name="role_name")):
+                 role_name: Option(str, 'Name of the role you would like to equip.', name="role_name", autocomplete=construct_role_list, required=True)):
     role = discord.utils.find(
       lambda r: r.name.casefold() == role_name.casefold(),
       self.guild.roles,
@@ -128,7 +132,7 @@ class PublicCommands(commands.Cog):
       await ctx.respond("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
       return
 
-    thresholds = {t[1]: t[0] for t in self.roles if not t[3]}
+    thresholds = {t[1]: t[0] for t in self.roles if not t[4]}
     to_remove = [
       r for r in ctx.author.roles
       if r.id in thresholds and r.id != role.id
@@ -190,7 +194,7 @@ class PublicCommands(commands.Cog):
     next_exp = self.exp_for_level(doc.get("level", 0) + 1)
     progress = ((current_exp - old_exp) / (next_exp - old_exp)) * 100
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
-    embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t}**' for t, r, m, p in self.roles if t > current_level), 'None!'), inline=True)
+    embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t}**' for t, r, n, m, p in self.roles if t > current_level), 'None!'), inline=True)
 
     embed.set_footer(text="TIP: Commands do not grant experience points.")
     await ctx.respond(embed=embed, ephemeral=True)
@@ -315,30 +319,6 @@ class PublicCommands(commands.Cog):
       {"$limit": limit},
     ]
 
-  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice"]:
-      return
-
-    new_doc = self.users.find_one_and_update(
-      {"_id": recipient},
-      {"$inc": {type: amount}},
-      upsert=True,
-      return_document=ReturnDocument.AFTER
-    )
-
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    self.recent.update_one(
-      {"user": recipient, "date": today},
-      {"$inc": {type: amount}},
-      upsert=True
-    )
-
-    if new_doc:
-      await self.check(new_doc)
-
-  def calculate(self, message: discord.Message = None):
-    return self.TEXT_AWARD
-
   async def check(self, doc):
     user = await self.guild.fetch_member(doc["_id"])
     total_exp = doc.get("text", 0) + doc.get("voice", 0)
@@ -371,18 +351,13 @@ class PublicCommands(commands.Cog):
     if not role:
       role = await self.guild.fetch_role(target[1])
 
-    level_role_ids = {t[1] for t in self.roles if not t[3]}
+    level_role_ids = {t[1] for t in self.roles if not t[4]}
     to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
     if to_remove:
       await user.remove_roles(*to_remove)
 
     if role not in user.roles:
       await user.add_roles(role)
-      if not pref:
-        try:
-          await user.send(target[2].strip("\"").replace("\\n","\n"))
-        except discord.Forbidden:
-          pass
 
 
   def exp_for_level(self, n: int = 0):

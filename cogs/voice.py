@@ -33,7 +33,7 @@ class Voice(commands.Cog):
   def update_database(self):
     self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
     self.VC_CONCURRENT_MEMBERS = int((self.config.find_one({"setting": "vc_concurrent_members"}))["value"].get("value", 2))
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
     self.VC_DAILY_CAP = int((self.config.find_one({"setting": "vc_daily_cap"}))["value"].get("hours", 2))
@@ -184,7 +184,7 @@ class Voice(commands.Cog):
     if not role:
       role = await self.guild.fetch_role(target[1])
 
-    level_role_ids = {t[1] for t in self.roles if not t[3]}
+    level_role_ids = {t[1] for t in self.roles if not t[4]}
     to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
     if to_remove:
       await user.remove_roles(*to_remove)
@@ -193,6 +193,6 @@ class Voice(commands.Cog):
       await user.add_roles(role)
       if not pref:
         try:
-          await user.send(target[2].strip("\"").replace("\\n","\n"))
+          await user.send(target[3].strip("\"").replace("\\n","\n"))
         except discord.Forbidden:
           pass

@@ -30,7 +30,7 @@ class Text(commands.Cog):
   def update_database(self):
     self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
     self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
+    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
     self.roles.sort(key=lambda t: t[0])
     self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
     debug = (self.config.find_one({"setting": "debug"}))["value"]
@@ -128,7 +128,7 @@ class Text(commands.Cog):
     if not role:
       role = await self.guild.fetch_role(target[1])
 
-    level_role_ids = {t[1] for t in self.roles if not t[3]}
+    level_role_ids = {t[1] for t in self.roles if not t[4]}
     to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
     if to_remove:
       await user.remove_roles(*to_remove)
@@ -137,7 +137,7 @@ class Text(commands.Cog):
       await user.add_roles(role)
       if not pref:
         try:
-          await user.send(target[2].strip("\"").replace("\\n","\n"))
+          await user.send(target[3].strip("\"").replace("\\n","\n"))
         except discord.Forbidden:
           pass
 

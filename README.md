@@ -67,11 +67,12 @@ Here is an example for creating role rewards (please note that all role reward-r
 ~~~
 !config add reward_A ```threshold=5
 role_id=1234567890
+role_name=Role Name Here
 message="Congratulations! You've leveled up enough to receive a reward. You now have the permissions to:\n- Attach Files\n- Embed Links"
 persistent=True```
 ~~~
 
-Because newlines will tell the bot that you're creating a new `key=value` pair, in order to insert newlines into the custom message you need to use `\n`. Quotation marks will be stripped.
+All 5 parameters are required to define a reward. Because actual newlines will tell the bot that you're creating a new `key=value` pair, in order to insert newlines into the custom message you need to use `\n`. Quotation marks will be stripped.
 
 The `persistent` option will specify whether you want the role to always remain enabled once a person reaches `threshold`, or whether you want users to be able to remove it with `/wear`.
 
