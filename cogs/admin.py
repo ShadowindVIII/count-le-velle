@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import Member, Status, User, Reaction, Message, ApplicationContext, Option
+from discord import Member, Status, User, Reaction, Message, ApplicationContext, Option, File
 
 import os
 import dotenv
@@ -30,6 +30,20 @@ class Admin(commands.Cog):
   @commands.Cog.listener()
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"]))
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
+  async def speak(self, ctx: commands.Context, channel: TextChannel|VoiceChannel|StageChannel|Thread, *, text: str = None):
+    files = []
+    if ctx.message.attachments is not None:
+      for attachment in ctx.message.attachments:
+        file = await attachment.to_file()
+        files.append(file)
+    if files == [] and text is None:
+      return
+    await channel.send(text, files=files)
+    await ctx.message.add_reaction('✅')
 
   @commands.command()
   @commands.guild_only()
