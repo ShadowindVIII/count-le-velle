@@ -117,19 +117,20 @@ class PublicCommands(commands.Cog):
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def wear(self, ctx: ApplicationContext,
                  role_name: Option(str, 'Name of the role you would like to equip.', name="role_name", autocomplete=construct_role_list, required=True)):
+    await ctx.defer(ephemeral=True)
     role = discord.utils.find(
       lambda r: r.name.casefold() == role_name.casefold(),
       self.guild.roles,
     )
     match = next((t for t in self.roles if role and t[1] == role.id), None)
     if not match:
-      await ctx.respond(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".",
+      await ctx.followup.send(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".",
                         ephemeral=True)
       return
 
     doc = self.users.find_one({"_id": ctx.author.id}) or {}
     if match[0] > doc.get("level", 0):
-      await ctx.respond("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
+      await ctx.followup.send("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
       return
 
     thresholds = {t[1]: t[0] for t in self.roles if not t[4]}
@@ -142,7 +143,7 @@ class PublicCommands(commands.Cog):
     if role not in ctx.author.roles:
       await ctx.author.add_roles(role)
 
-    await ctx.respond("You are hereby awarded the role you seek.", ephemeral=True)
+    await ctx.followup.send("You are hereby awarded the role you seek.", ephemeral=True)
     self.users.update_one(
       {"_id": ctx.author.id},
       {"$set": {"preference": role.id}},
