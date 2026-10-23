@@ -8,6 +8,9 @@ from pymongo import ReturnDocument
 
 from datetime import datetime, timedelta, timezone
 
+from buttons.OptOut import OptOut
+from buttons.RevealButton import RevealButton
+
 from bson.int64 import Int64
 import io
 import json
@@ -16,47 +19,6 @@ import dotenv
 
 GUILD = int(os.environ['OPERATING_GUILD'])
 COMMAND_COOLDOWN = os.environ['COMMAND_COOLDOWN']
-
-class OptOutView(discord.ui.View):
-  def __init__(self, cog, user):
-    super().__init__(timeout=60)
-    self.cog = cog
-    self.user = user
-
-  @discord.ui.button(label='Confirm', style=discord.ButtonStyle.danger)
-  async def confirm(self, button, interaction):
-    await interaction.response.defer()
-    doc = self.cog.users.find_one({"_id": self.user.id})
-    recent_count = self.cog.recent.count_documents({"user": self.user.id})
-    if not doc and not recent_count:
-      await interaction.edit_original_response(content='It seems you have no data associated with your account with which to opt out.', view=None)
-      return
-    channel_id = int(os.environ['LOG_CHANNEL'])
-    log_channel = self.cog.bot.get_channel(channel_id)
-    if log_channel is None:
-      log_channel = await self.cog.bot.fetch_channel(channel_id)
-    payload = json.dumps(doc, default=str, indent=2)
-    await log_channel.send(
-      f'Opt-out: {self.user} ({self.user.id}), {recent_count} recent entries deleted.',
-      file=discord.File(io.BytesIO(payload.encode()), filename=f'optout_{self.user.id}.json')
-    )
-    self.cog.users.delete_one({"_id": self.user.id})
-    self.cog.recent.delete_many({"user": self.user.id})
-    role = discord.utils.get(interaction.guild.roles, name='No Exp')
-    if role:
-      await self.user.add_roles(role)
-    if doc:
-      text = doc.get("text", 0)
-      voice = doc.get("voice", 0)
-    else:
-      text = 0
-      voice = 0
-
-    await interaction.edit_original_response(content=f'You have been opted out and your experience data ({text} text / {voice} voice) has been deleted. To restore it and/or opt back in, contact staff.', view=None)
-
-  @discord.ui.button(label='Cancel', style=discord.ButtonStyle.secondary)
-  async def cancel(self, button, interaction):
-    await interaction.response.edit_message(content='Cancelled.', view=None)
 
 class PublicCommands(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
@@ -249,7 +211,8 @@ class PublicCommands(commands.Cog):
       lines.append(f'{rank}. <@{doc["_id"]}>{level} - **{text + voice}** Total (**{text}** Text / **{voice}** VC)')
 
     embed = Embed(title=f"{timespan} Leaderboard ({sort_type})", description="\n".join(lines) or "No results.", color=0xA9BFBE)
-    await ctx.respond(embed=embed, ephemeral=True)
+    reveal_button = RevealButton(embed)
+    await ctx.respond(embed=embed, view=reveal_button, ephemeral=True)
 
   def base_stages(self, timespan):
     if timespan == "All Time":
