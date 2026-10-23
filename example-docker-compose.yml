@@ -1,9 +1,0 @@
-name: count-le-velle
-
-services:
-  levelbot:
-    container_name: count-le-velle
-    image: count-le-velle:latest
-    env_file:
-      - .env
-    restart: unless-stopped
