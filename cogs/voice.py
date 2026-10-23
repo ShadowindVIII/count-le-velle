@@ -86,7 +86,7 @@ class Voice(commands.Cog):
     members = [m for m in channel.members if not m.bot]
     big_enough = len(members) >= self.VC_CONCURRENT_MEMBERS
     for m in members:
-      deaf = m.voice.self_deaf or m.voice.deaf
+      deaf = m.voice.self_deaf or m.voice.deaf or m.voice.mute
       skip = any(a.id in self.immune_roles for a in m.roles)
       if big_enough and not deaf and not skip:
         await self.start_segment(m.id)
@@ -100,7 +100,7 @@ class Voice(commands.Cog):
       if not channel.category_id == self.DEBUG[1]:
         return
     changed_channel = before.channel != after.channel
-    changed_inactive = before.self_deaf != after.self_deaf or before.deaf != after.deaf
+    changed_inactive = before.self_deaf != after.self_deaf or before.deaf != after.deaf or before.mute != after.mute
     if not (changed_channel or changed_inactive):
       return
     if changed_channel:
