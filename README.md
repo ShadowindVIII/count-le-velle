@@ -1,10 +1,14 @@
+# About this bot
+
+This bot was purpose-built to migrate from Gaius Play, after its owner had been hacked and the bots experienced a downtime of several days. This repository is kept open-sourced and maintained in case anybody wishes to follow suit or otherwise wants to run their own Discord bot for tracking experience/levels. 
+
 This bot relies on MongoDB Atlas for its database, and can be run in a docker container. This README assumes you know how to use Docker and either already have a Discord bot created in the Developer Portal, or that you know how to make one and configure it as needed. You will need to enable the Message Content and Server Members privileged intents in Discord's Developer Portal. 
 
 Setup information can be found at the bottom of this README, starting at the Database section. 
 
-MongoDB is chosen for the database because it already stores data in an encrypted format, both at rest as well as in transit, because it is required by Discord's Developer TOS. Docker is chosen as it creates a virtual environment so your `.env` file is not easily accessible by other softwares that might be running on your host machine, and so that any dependencies (most notably, the lack thereof) gets handled by Docker.
+MongoDB is chosen for the database because it already stores data in an encrypted format, both at-rest as well as in-transit, because it is required by Discord's Developer TOS. Docker is chosen as it creates a virtual environment so your `.env` file is not easily accessible by other softwares that might be running on your host machine, and so that any dependencies (most notably, the lack thereof) get handled by Docker.
 
-Please note that this software is presented to the public **as-is, with no guarantees or assurances if separate functionality or different functionality is desired**. I will try my best to explain the systems herein to allow the bot to work as-is, but I am still a human and this was built in a little over 2 weeks, with the bulk of that time being in the last 5 days, around the time that the Gaius bots and their owner got hacked.
+Please note that this software is presented to the public **as-is, with no guarantees or assurances if separate functionality or different functionality is desired**. I will try my best to explain the systems herein to allow the bot to work as-is, but I am still a human.
 
 # Experience System
 
@@ -15,15 +19,19 @@ Please note that this software is presented to the public **as-is, with no guara
 - Posting stickers or sending messages that start with the bot's prefix will not give experience
 - Specific roles can be configured to make someone immune to EXP. This is useful for `/optout` or for punishing users who attempt to abuse the experience system
 - For voice chats, if more than 2 people (configurable) are in a voice chat, timestamps of when they join get stored temporarily along with their user ID
-- When someone leaves, deafen or switch VC, the time spent in minutes gets awarded at a rate of 6 exp/min (configurable). (People talk ~3x faster than they type so text is about 3x higher by default to accommodate)
+- When someone leaves, deafens, switches VC or gets muted by a moderator (red microphone icon), the time spent in minutes gets awarded at a rate of 6 exp/min (configurable). (People talk ~3x faster than they type so text is about 3x higher by default to accommodate)
 - VC experience is separate from text exp, and VC exp caps out at 2h (configurable) per 23h period (also configurable), to limit the efficacy of sitting AFK in a VC with an alt overnight
-- If someone is in a VC but muted, their **voice experience will still count but messages they send in a VC's text channel will not be counted**. Please keep this in mind and decide with your staff team whether you need to edit this
+- If someone is in a VC but self-muted, their **voice experience will still count but messages they send in a VC's text channel will not be counted**. Please keep this in mind and decide with your staff team whether you need to edit this
 - `/ping` command for checking latency/uptime
 - `/help` command and `/help staff` to see staff commands
 - `/level [user_id]` - leave blank to view your own level/exp
-- `/leaderboard n` to see the top `n` spots on the overall leaderboard, or `/leaderboard a-b` to view a specific range, capped at 30 per command use. You can also specify Weekly/Monthly to see where you stand compared to other people that are currently active 
+- `/leaderboard [range] [timespan] [sort_type]` 
+- - Results contain a "Show to everyone" button which users can press to post the results in chat, rather than keeping the results in an ephemeral message
+- - `range`
+- - `timespan` allows the user to show Overall leaderboards, or only results from the past 7 ("Weekly") or 30 ("Monthly") days
+- - `sort_type` allows the user to specify whether leaderboards should sort by text only, voice only, both, or view "Around Me" to see where they stand in the leaderboards
 - `/optout` command for those who want to delete all traces of their experience data. Assigns a "No Exp" role if it exists, to prevent future exp gain
-- `/wear [role name]` command to switch which color/icon they use - only one role is added at a time.
+- `/wear [role name]` command to switch which color/icon they use - only one role is added at a time
 - At configurable thresholds, roles can be granted to users as rewards for spending time in the server. If a config value starts with `reward_` it is automatically treated as a reward, and requires 3 parameters:
 - - `threshold` (int) - the level that a role should be awarded at
 - - `role_id` (int) - the ID of the role which should be awarded. Please note that all roles have to be underneath the bot's highest role
