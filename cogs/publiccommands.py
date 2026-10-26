@@ -211,7 +211,7 @@ class PublicCommands(commands.Cog):
       lines.append(f'{rank}. <@{doc["_id"]}>{level} - **{text + voice}** Total (**{text}** Text / **{voice}** VC)')
 
     embed = Embed(title=f"{timespan} Leaderboard ({sort_type})", description="\n".join(lines) or "No results.", color=0xA9BFBE)
-    reveal_button = RevealButton(embed)
+    reveal_button = RevealButton(embed=embed)
     await ctx.respond(embed=embed, view=reveal_button, ephemeral=True)
 
   def base_stages(self, timespan):
