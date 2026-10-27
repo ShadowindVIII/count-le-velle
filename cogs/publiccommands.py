@@ -153,7 +153,7 @@ class PublicCommands(commands.Cog):
     embed.add_field(name='Total EXP', value=current_exp, inline=True)
     embed.add_field(name='Level', value=current_level, inline=True)
 
-    old_exp = self.exp_for_level(doc.get("level", 0) - 1)
+    old_exp = self.exp_for_level(doc.get("level", 0))
     next_exp = self.exp_for_level(doc.get("level", 0) + 1)
     progress = ((current_exp - old_exp) / (next_exp - old_exp)) * 100
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
