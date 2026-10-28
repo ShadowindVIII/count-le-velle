@@ -159,6 +159,11 @@ class PublicCommands(commands.Cog):
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
     embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t}**' for t, r, n, m, p in self.roles if t > current_level), 'None!'), inline=True)
 
+    next_role_exp = self.exp_for_level(next((t[0] for t in self.roles if t[0] > current_level), 0)))
+    next_role_progress = ((next_role_exp - current_exp) / next_role_exp) * 100
+    if next_role_progress > 0.0:
+      embed.add_field(name='Progress Towards Next Role', value=f'{current_exp} / {next_role_exp} ({next_role_progress}%)', inline=True)
+
     embed.set_footer(text="TIP: Commands do not grant experience points.")
     await ctx.respond(embed=embed, ephemeral=True)
 
