@@ -157,7 +157,7 @@ class PublicCommands(commands.Cog):
     next_exp = self.exp_for_level(doc.get("level", 0) + 1)
     progress = ((current_exp - old_exp) / (next_exp - old_exp)) * 100
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
-    embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t:.2f}**' for t, r, _, _, _ in self.roles if t > current_level), 'None!'), inline=True)
+    embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t}**' for t, r, _, _, _ in self.roles if t > current_level), 'None!'), inline=True)
 
     next_role_exp = self.exp_for_level(next((t[0] for t in self.roles if t[0] > current_level), 0))
     if next_role_exp != 0:
