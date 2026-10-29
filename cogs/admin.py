@@ -1,3 +1,5 @@
+import json
+
 import discord
 from discord.ext import commands
 from discord import Member, Status, User, Reaction, Message, ApplicationContext, Option, File, TextChannel, VoiceChannel, StageChannel, Thread
@@ -16,6 +18,8 @@ import time
 
 import asyncio
 from pymongo import UpdateOne
+
+import exphelper as exp
 
 ADMIN_ROLE_ID = int(os.environ["ADMIN_ROLE_ID"])
 STAFF_ROLE_ID = int(os.environ["STAFF_ROLE_ID"])
@@ -97,7 +101,7 @@ class Admin(commands.Cog):
           "$set": {
             "text": text,
             "voice": voice,
-            "level": exp_to_level(text + voice),
+            "level": exp.exp_to_level(text + voice),
           },
           "$setOnInsert": {"preference": 0},
         },
@@ -315,6 +319,7 @@ class Admin(commands.Cog):
     return [dict_string[splices[i]:splices[i+1]].strip(",").strip() for i in range(len(splices)-1)]
 
   def refresh_databases(self):
+    exp.update_database()
     for cog in self.bot.cogs.values():
       try:
         cog.update_database()

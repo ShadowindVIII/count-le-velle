@@ -9,6 +9,7 @@ from cogs.admin import Admin
 from cogs.text import Text
 from cogs.voice import Voice
 from cogs.publiccommands import PublicCommands
+import exphelper as exp
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import random
@@ -33,8 +34,11 @@ try:
 except Exception as e:
   print(e)
 
+
 bot = commands.Bot(command_prefix=os.environ['PREFIX'], intents=intents)
 bot.remove_command('help')
+
+exp.init(bot, mongo)
 
 bot.add_cog(Text(bot, mongo))
 bot.add_cog(Voice(bot, mongo))
@@ -102,6 +106,7 @@ async def crash(ctx: commands.Context):
 
 @bot.event
 async def on_ready():
+  await exp.on_ready()
   print(f'\n\n************************ READY ************************\n\n* COGS:\n{list(bot.cogs)}', flush=True)
 
   log_channel = await bot.fetch_channel(os.environ['LOG_CHANNEL'])

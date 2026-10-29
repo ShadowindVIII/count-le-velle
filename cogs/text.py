@@ -10,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 
 import os
 import dotenv
+import exphelper as exp
+
 COMMAND_COOLDOWN = os.environ['COMMAND_COOLDOWN']
 
 class Text(commands.Cog):
@@ -30,9 +32,6 @@ class Text(commands.Cog):
   def update_database(self):
     self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
     self.TEXT_AWARD = int((self.config.find_one({"setting": "text_award"}))["value"].get("value", 3))
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
-    self.roles.sort(key=lambda t: t[0])
-    self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
     debug = (self.config.find_one({"setting": "debug"}))["value"]
     self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id", 0))]
 
@@ -51,7 +50,7 @@ class Text(commands.Cog):
       return
     if len(message.content) < 2 and not message.attachments:
       return
-    if any(a.id in self.immune_roles for a in message.author.roles):
+    if any(a.id in exp.immune_roles for a in message.author.roles):
       return
 
     now = datetime.now(timezone.utc)
@@ -91,58 +90,7 @@ class Text(commands.Cog):
     )
 
     if new_doc:
-      await self.check(new_doc)
+      await exp.check(new_doc)
 
   def calculate(self, message: discord.Message = None):
     return self.TEXT_AWARD
-
-  async def check(self, doc):
-    user = await self.guild.fetch_member(doc["_id"])
-    total_exp = doc.get("text", 0) + doc.get("voice", 0)
-
-    level = 0
-    needed_exp = 100
-    while total_exp >= needed_exp:
-      level += 1
-      needed_exp += 5 * level**2 + 50 * level + 100
-    current_level = level
-
-    prev_level = doc.get("level")
-    if prev_level != current_level:
-      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
-      if prev_level is not None and current_level > prev_level:
-        try:
-          await user.send(f"Congratulations **{user.nick or user.display_name}**, you just advanced to **level {current_level}**!")
-        except discord.Forbidden:
-          pass
-
-    eligible = [t for t in self.roles if current_level >= t[0]]
-    if not eligible:
-      return
-
-    pref_id = doc.get("preference")
-    pref = next((t for t in eligible if t[1] == pref_id), None)
-    target = pref or max(eligible, key=lambda t: t[0])
-
-    role = self.guild.get_role(target[1])
-    if not role:
-      role = await self.guild.fetch_role(target[1])
-
-    level_role_ids = {t[1] for t in self.roles if not t[4]}
-    to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
-    if to_remove:
-      await user.remove_roles(*to_remove)
-
-    if role not in user.roles:
-      await user.add_roles(role)
-      if not pref:
-        try:
-          await user.send(target[3].strip("\"").replace("\\n","\n"))
-        except discord.Forbidden:
-          pass
-
-
-  def exp_for_level(self, n: int = 0):
-    if n <= 0:
-      return 0
-    return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n

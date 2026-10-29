@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import Member, Status, User, Reaction, Message, Embed, ApplicationContext, Option
 
+import exphelper as exp
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from pymongo import ReturnDocument
@@ -26,21 +27,15 @@ class PublicCommands(commands.Cog):
     self.recent = mongo.database.recent
     self.users = mongo.database.users
     self.config = mongo.database.config
-    self.update_database()
 
   @commands.Cog.listener()
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"])) 
-    self.update_database()
 
   @commands.slash_command(description='Delete all your experience data and opt out from receiving any more', guild_ids=[GUILD])
   async def optout(self, ctx: ApplicationContext):
     await ctx.respond('Opting out will delete all your experience data. Are you sure you want to do this?', view=OptOutView(self, ctx.author), ephemeral=True)
 
-  def update_database(self):
-    self.roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in self.config.find({"setting": {"$regex": "^reward_"}})]
-    self.roles.sort(key=lambda t: t[0])
-    self.immune_roles = self.config.find_one({"setting": "immune_roles"})["value"]["list"]
 
   @commands.slash_command(description="View the commands I can run", guild_ids=[GUILD])
   async def help(self, ctx: ApplicationContext, options: Option(str, 'View other categories of help. Leave blank if you\'re not staff.', default=None, name="options")):
@@ -84,7 +79,7 @@ class PublicCommands(commands.Cog):
       lambda r: r.name.casefold() == role_name.casefold(),
       self.guild.roles,
     )
-    match = next((t for t in self.roles if role and t[1] == role.id), None)
+    match = next((t for t in exp.roles if role and t[1] == role.id), None)
     if not match:
       await ctx.followup.send(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".",
                         ephemeral=True)
@@ -95,7 +90,7 @@ class PublicCommands(commands.Cog):
       await ctx.followup.send("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
       return
 
-    thresholds = {t[1]: t[0] for t in self.roles if not t[4]}
+    thresholds = {t[1]: t[0] for t in exp.roles if not t[4]}
     to_remove = [
       r for r in ctx.author.roles
       if r.id in thresholds and r.id != role.id
@@ -117,7 +112,7 @@ class PublicCommands(commands.Cog):
   async def restore(self, ctx: ApplicationContext):
     doc = self.users.find_one({"_id": ctx.author.id})
     if doc:
-      await self.check(doc)
+      await exp.check(doc)
       await ctx.respond("Successfully counted every last experience point and awarded you with the associated roles.", ephemeral=True)
 
   @commands.slash_command(description="Check your level or somebody else's", guild_ids=[GUILD])
@@ -153,13 +148,13 @@ class PublicCommands(commands.Cog):
     embed.add_field(name='Total EXP', value=current_exp, inline=True)
     embed.add_field(name='Level', value=current_level, inline=True)
 
-    old_exp = self.exp_for_level(doc.get("level", 0))
-    next_exp = self.exp_for_level(doc.get("level", 0) + 1)
+    old_exp = exp.exp_for_level(doc.get("level", 0))
+    next_exp = exp.exp_for_level(doc.get("level", 0) + 1)
     progress = ((current_exp - old_exp) / (next_exp - old_exp)) * 100
     embed.add_field(name='Progress', value=f'{current_exp - old_exp} / {next_exp - old_exp} ({progress:.1f}%)', inline=True)
-    embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t}**' for t, r, _, _, _ in self.roles if t > current_level), 'None!'), inline=True)
+    embed.add_field(name='Next Role', value=next((f'<@&{r}> at level **{t}**' for t, r, _, _, _ in exp.roles if t > current_level), 'None!'), inline=True)
 
-    next_role_exp = self.exp_for_level(next((t[0] for t in self.roles if t[0] > current_level), 0))
+    next_role_exp = exp.exp_for_level(next((t[0] for t in exp.roles if t[0] > current_level), 0))
     if next_role_exp != 0:
       next_role_progress = ((current_exp) / next_role_exp) * 100
       embed.add_field(name='Progress Towards Next Role', value=f'{current_exp} / {next_role_exp} ({next_role_progress:.2f}%)', inline=True)
@@ -287,52 +282,6 @@ class PublicCommands(commands.Cog):
       {"$skip": skip},
       {"$limit": limit},
     ]
-
-  async def check(self, doc):
-    user = await self.guild.fetch_member(doc["_id"])
-    total_exp = doc.get("text", 0) + doc.get("voice", 0)
-
-    level = 0
-    needed_exp = 100
-    while total_exp >= needed_exp:
-      level += 1
-      needed_exp += 5 * level**2 + 50 * level + 100
-    current_level = level
-
-    prev_level = doc.get("level")
-    if prev_level != current_level:
-      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
-      if prev_level is not None and current_level > prev_level:
-        try:
-          await user.send(f"Congratulations **{user.nick or user.display_name}**, you just advanced to **level {current_level}**!")
-        except discord.Forbidden:
-          pass
-
-    eligible = [t for t in self.roles if current_level >= t[0]]
-    if not eligible:
-      return
-
-    pref_id = doc.get("preference")
-    pref = next((t for t in eligible if t[1] == pref_id), None)
-    target = pref or max(eligible, key=lambda t: t[0])
-
-    role = self.guild.get_role(target[1])
-    if not role:
-      role = await self.guild.fetch_role(target[1])
-
-    level_role_ids = {t[1] for t in self.roles if not t[4]}
-    to_remove = [r for r in user.roles if r.id in level_role_ids and r.id != role.id]
-    if to_remove:
-      await user.remove_roles(*to_remove)
-
-    if role not in user.roles:
-      await user.add_roles(role)
-
-
-  def exp_for_level(self, n: int = 0):
-    if n <= 0:
-      return 0
-    return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
 
   @commands.Cog.listener()
   async def on_application_command_error(self, ctx, error):
