@@ -21,7 +21,7 @@ from aiohttp import web
 API_ENDPOINT = os.environ.get('API_ENDPOINT')
 PORT = os.environ.get('API_PORT')
 
-ADMIN_ROLE_ID = os.environ['ADMIN_ROLE_ID']
+ADMIN_ROLE_ID = int(os.environ['ADMIN_ROLE_ID'])
 
 class API(commands.Cog):
   def __init__(self, bot, mongo):
