@@ -1,13 +1,18 @@
 import discord
 
+from pymongo import ReturnDocument
 from pymongo.mongo_client import MongoClient
 
+from datetime import datetime, timezone
+
 import os
+import asyncio
 
 def init(inputBot, mongo: MongoClient):
-  global config, bot, users
+  global config, bot, users, recent
   config = mongo.database.config
   users = mongo.database.users
+  recent = mongo.database.recent
   bot = inputBot
   update_database()
 
@@ -23,6 +28,8 @@ def update_database():
     
 
 async def check(doc):
+  if guild is None:
+    await asyncio.sleep(1)
   user = await guild.fetch_member(doc["_id"])
   total_exp = doc.get("text", 0) + doc.get("voice", 0)
 
@@ -71,3 +78,25 @@ def exp_for_level(n: int = 0):
   if n <= 0:
     return 0
   return 5 * (n * (n - 1) * (2 * n - 1) // 6) + 25 * n * (n - 1) + 100 * n
+
+async def internal_award(recipient: int = 0, amount: int = 0, type: str = "text"):
+  if recipient == 0 or type not in ["text", "voice", "bonus"]:
+    return None
+
+  new_doc = users.find_one_and_update(
+    {"_id": recipient},
+    {"$inc": {type: amount}},
+    upsert=True,
+    return_document=ReturnDocument.AFTER
+  )
+
+  today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+  recent.update_one(
+    {"user": recipient, "date": today},
+    {"$inc": {type: amount}},
+    upsert=True
+  )
+
+  if new_doc:
+    await check(new_doc)
+    return new_doc

@@ -69,6 +69,7 @@ class Text(commands.Cog):
       upsert=True
     )
 
+<<<<<<< HEAD
     await self.internal_award(recipient=message.author.id, amount=self.calculate(message), type="text")
 
   async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
@@ -91,6 +92,9 @@ class Text(commands.Cog):
 
     if new_doc:
       await exp.check(new_doc)
+=======
+    await exp.internal_award(recipient=message.author.id, amount=self.calculate(message), type="text")
+>>>>>>> e6aef8e34c757060b921ca5183666c1b40375bce
 
   def calculate(self, message: discord.Message = None):
     return self.TEXT_AWARD
