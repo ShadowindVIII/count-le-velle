@@ -126,30 +126,6 @@ class Voice(commands.Cog):
   async def before_double_check(self):
     await self.bot.wait_until_ready()
 
-<<<<<<< HEAD
-  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice", "bonus"]:
-      return
-
-    new_doc = self.users.find_one_and_update(
-      {"_id": recipient},
-      {"$inc": {type: amount}},
-      upsert=True,
-      return_document=ReturnDocument.AFTER
-    )
-
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    self.recent.update_one(
-      {"user": recipient, "date": today},
-      {"$inc": {type: amount}},
-      upsert=True
-    )
-
-    if new_doc:
-      await exp.check(new_doc)
-
-=======
->>>>>>> e6aef8e34c757060b921ca5183666c1b40375bce
   def calculate(self, timedelta: timedelta = None):
     # put whatever calculations you want here!
     return (self.VOICE_AWARD * (timedelta.total_seconds() // 60))
