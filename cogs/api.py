@@ -75,7 +75,7 @@ class API(commands.Cog):
     doc = await exp.internal_award(recipient=recipient, amount=amount, type=award_type)
     if doc:
       doc["_id"] = str(doc["_id"])
-      return web.json_response(doc, status=200)
+      return web.json_response(text=json.dumps(doc, default=str), status=200)
     else:
       return web.json_response({"error": "invalid experience type"}, status=400)
 
