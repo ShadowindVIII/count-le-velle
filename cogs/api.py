@@ -89,13 +89,13 @@ class API(commands.Cog):
     if action == "create":
       key = secrets.token_urlsafe(32)
       try:
-        await ctx.author.send(f"Your `{label}` API key you generated is: ||{key}||", delete_after=15)
+        await ctx.author.send(f"Your `{label}` API key you generated is: ||{key}||", delete_after=30)
       except discord.Forbidden:
         await ctx.send("Please open your DMs so you can receive an API key privately.")
         return
       self.api_keys.insert_one({"_id": (hashlib.sha256(key.encode()).hexdigest()), "label": label, "created": datetime.now(timezone.utc).isoformat()})
       await ctx.send(f"Created API key `{label}` and stored its SHA256 hash to the database. "
-                     f"Your key will be sent via DM in 5 seconds and the message will be auto-deleted after 15 seconds. "
+                     f"Your key was sent via DM, the message will be auto-deleted after 30 seconds. "
                      f"__You will not be able to view this key again, please keep it safe__.")
     elif action == "remove":
       found = self.api_keys.find_one_and_delete({"label": label})
