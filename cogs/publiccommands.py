@@ -141,10 +141,11 @@ class PublicCommands(commands.Cog):
       return
 
     current_level = doc.get("level", 0)
-    current_exp = doc.get("text", 0) + doc.get("voice", 0)
+    current_exp = doc.get("text", 0) + doc.get("voice", 0) + doc.get("bonus", 0)
     embed = Embed(title=f'Counting EXP for {user.nick}', color=user.accent_color)
     embed.add_field(name='Text EXP', value=doc.get("text", 0), inline=True)
     embed.add_field(name='Voice EXP', value=doc.get("voice", 0), inline=True)
+    embed.add_field(name='Bonus EXP', value=doc.get("bonus", 0), inline=True)
     embed.add_field(name='Total EXP', value=current_exp, inline=True)
     embed.add_field(name='Level', value=current_level, inline=True)
 
@@ -169,7 +170,7 @@ class PublicCommands(commands.Cog):
   async def leaderboard(self, ctx: ApplicationContext,
                         range: Option(str, 'Area of the leaderboard you wish to see, e.g. "10" or "50-80"', default="10", name="range"),
                         timespan: Option(str, 'Timespan you wish to view', default="All Time", name="timespan", choices=['All Time', 'Weekly', "Monthly"]),
-                        sort_type: Option(str, 'Method you wish to use to sort the leaderboard', default='Voice & Text', name="sort_type", choices=['Voice & Text', "Around Me", "Voice", "Text"])):
+                        sort_type: Option(str, 'Method you wish to use to sort the leaderboard', default='All Exp', name="sort_type", choices=['All Exp', "Around Me", "Voice", "Text", "Bonus"])):
     await ctx.response.defer(ephemeral=True)
     low, sep, high = range.partition("-")
     try:
@@ -207,8 +208,9 @@ class PublicCommands(commands.Cog):
     for rank, doc in enumerate(db.aggregate(pipeline), start=first_rank):
       text = doc.get("text", 0)
       voice = doc.get("voice", 0)
+      bonus = doc.get("bonus", 0)
       level = f' Level `{doc.get("level", 0)}`' if timespan == "All Time"  else ""
-      lines.append(f'{rank}. <@{doc["_id"]}>{level} - **{text + voice}** Total (**{text}** Text / **{voice}** VC)')
+      lines.append(f'{rank}. <@{doc["_id"]}>{level} - **{text + voice}** Total (**{text}** Text / **{voice}** VC / **{bonus}** Bonus)')
 
     embed = Embed(title=f"{timespan} Leaderboard ({sort_type})", description="\n".join(lines) or "No results.", color=0xA9BFBE)
     reveal_button = RevealButton(embed=embed)
@@ -231,18 +233,21 @@ class PublicCommands(commands.Cog):
         "_id": "$user",
         "text": {"$sum": "$text"},
         "voice": {"$sum": "$voice"},
+        "bonus": {"sum": "$bonus"},
       }},
     ]
 
   def build_pipeline(self, timespan, sort_type, skip, limit):
     collection, base = self.base_stages(timespan)
     options = {
-      "Voice & Text": {"$add": [
+      "All Exp": {"$add": [
         {"$ifNull": ["$text", 0]},
         {"$ifNull": ["$voice", 0]},
+        {"$ifNull": ["$bonus", 0]},
       ]},
       "Voice": {"$ifNull": ["$voice", 0]},
-      "Text": {"$ifNull": ["$text", 0]}
+      "Text": {"$ifNull": ["$text", 0]},
+      "Bonus": {"$ifNull": ["$bonus", 0]}
     }
     exp = options.get(sort_type)
     if collection is None or exp is None or sort_type == "Around Me":
@@ -258,7 +263,7 @@ class PublicCommands(commands.Cog):
     collection, base = self.base_stages(timespan)
     if collection is None:
       return None, None, None
-    scored = base + [{"$addFields": {"total_exp": {"$add": [{"$ifNull": ["$text", 0]},{"$ifNull": ["$voice", 0]}]}}}]
+    scored = base + [{"$addFields": {"total_exp": {"$add": [{"$ifNull": ["$text", 0]},{"$ifNull": ["$voice", 0]},{"$ifNull": ["$bonus", 0]}]}}}]
 
     me = list(collection.aggregate(scored + [{"$match": {"_id": user_id}}]))
     if not me:

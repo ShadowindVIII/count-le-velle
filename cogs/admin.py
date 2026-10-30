@@ -145,6 +145,13 @@ class Admin(commands.Cog):
         upsert=True,
         return_document=ReturnDocument.AFTER
       )
+    if type == "bonus":
+      new_doc = self.users.find_one_and_update(
+        {"_id": recipient},
+        {"$set": {"bonus": amount}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER
+      )
 
     await self.check(new_doc)
     await ctx.send(content=f"Successfully updated <@{recipient}>'s **{type}** experience to **{amount}**.",allowed_mentions=discord.AllowedMentions.none())
@@ -168,6 +175,13 @@ class Admin(commands.Cog):
       new_doc = self.users.find_one_and_update(
         {"_id": recipient},
         {"$set": {"voice": (doc.get("voice", 0) + amount)}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER
+      )
+    if type == "bonus":
+      new_doc = self.users.find_one_and_update(
+        {"_id": recipient},
+        {"$set": {"bonus": (doc.get("bonus", 0) + amount)}},
         upsert=True,
         return_document=ReturnDocument.AFTER
       )

@@ -127,7 +127,7 @@ class Voice(commands.Cog):
     await self.bot.wait_until_ready()
 
   async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice"]:
+    if recipient == 0 or type not in ["text", "voice", "bonus"]:
       return
 
     new_doc = self.users.find_one_and_update(
