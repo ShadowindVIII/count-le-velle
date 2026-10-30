@@ -7,4 +7,5 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-
+    ports:
+      - 127.0.0.1:8080:8080 # pass through your reverse proxy of choice

@@ -43,7 +43,10 @@ exp.init(bot, mongo)
 bot.add_cog(Text(bot, mongo))
 bot.add_cog(Voice(bot, mongo))
 bot.add_cog(PublicCommands(bot, mongo))
-bot.add_cog(Admin(bot, mongo))
+if os.environ['API_ENDPOINT'] != "/path/to/your/api":
+  bot.add_cog(Admin(bot, mongo))
+else:
+  print("API endpoint not specified, API cog will remain disabled under assumption it is not needed.")
 
 # **************
 # **************
