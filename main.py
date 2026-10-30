@@ -9,6 +9,7 @@ from cogs.admin import Admin
 from cogs.text import Text
 from cogs.voice import Voice
 from cogs.publiccommands import PublicCommands
+from cogs.api import API
 import exphelper as exp
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -44,7 +45,7 @@ bot.add_cog(Text(bot, mongo))
 bot.add_cog(Voice(bot, mongo))
 bot.add_cog(PublicCommands(bot, mongo))
 if os.environ['API_ENDPOINT'] != "/path/to/your/api":
-  bot.add_cog(Admin(bot, mongo))
+  bot.add_cog(API(bot, mongo))
 else:
   print("API endpoint not specified, API cog will remain disabled under assumption it is not needed.")
 
