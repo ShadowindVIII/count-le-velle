@@ -233,7 +233,7 @@ class PublicCommands(commands.Cog):
         "_id": "$user",
         "text": {"$sum": "$text"},
         "voice": {"$sum": "$voice"},
-        "bonus": {"sum": "$bonus"},
+        "bonus": {"$sum": "$bonus"},
       }},
     ]
 
