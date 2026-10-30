@@ -3,6 +3,7 @@ import discord
 from pymongo.mongo_client import MongoClient
 
 import os
+import asyncio
 
 def init(inputBot, mongo: MongoClient):
   global config, bot, users
@@ -23,6 +24,8 @@ def update_database():
     
 
 async def check(doc):
+  if guild is None:
+    await asyncio.sleep(1)
   user = await guild.fetch_member(doc["_id"])
   total_exp = doc.get("text", 0) + doc.get("voice", 0)
 
