@@ -69,28 +69,7 @@ class Text(commands.Cog):
       upsert=True
     )
 
-    await self.internal_award(recipient=message.author.id, amount=self.calculate(message), type="text")
-
-  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice"]:
-      return
-
-    new_doc = self.users.find_one_and_update(
-      {"_id": recipient},
-      {"$inc": {type: amount}},
-      upsert=True,
-      return_document=ReturnDocument.AFTER
-    )
-
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    self.recent.update_one(
-      {"user": recipient, "date": today},
-      {"$inc": {type: amount}},
-      upsert=True
-    )
-
-    if new_doc:
-      await exp.check(new_doc)
+    await exp.internal_award(recipient=message.author.id, amount=self.calculate(message), type="text")
 
   def calculate(self, message: discord.Message = None):
     return self.TEXT_AWARD

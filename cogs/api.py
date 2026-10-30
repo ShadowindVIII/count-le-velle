@@ -72,34 +72,12 @@ class API(commands.Cog):
     if not award_type:
       return web.json_response({'error': 'missing "type" field'}, status=400)
     amount = payload.get("amount", 0)
-    doc = await self.internal_award(recipient=recipient, amount=amount, type=award_type)
+    doc = await exp.internal_award(recipient=recipient, amount=amount, type=award_type)
     if doc:
       doc["_id"] = str(doc["_id"])
       return web.json_response(doc, status=200)
     else:
       return web.json_response({"error": "invalid experience type"}, status=400)
-
-  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice", "bonus"]:
-      return None
-
-    new_doc = self.users.find_one_and_update(
-      {"_id": recipient},
-      {"$inc": {type: amount}},
-      upsert=True,
-      return_document=ReturnDocument.AFTER
-    )
-
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    self.recent.update_one(
-      {"user": recipient, "date": today},
-      {"$inc": {type: amount}},
-      upsert=True
-    )
-
-    if new_doc:
-      await exp.check(new_doc)
-      return new_doc
 
   @commands.command()
   @commands.has_any_role(ADMIN_ROLE_ID)

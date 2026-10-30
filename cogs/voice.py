@@ -56,7 +56,7 @@ class Voice(commands.Cog):
       duration = datetime.now(timezone.utc) - doc["joined"]
       granted = self.apply_daily_cap(member_id, doc["joined"], duration)
       if granted > timedelta(0):
-        await self.internal_award(member_id, self.calculate(timedelta=granted), "voice")
+        await exp.internal_award(member_id, self.calculate(timedelta=granted), "voice")
 
   def apply_daily_cap(self, member_id, joined, duration):
     now = datetime.now(timezone.utc)
@@ -125,27 +125,6 @@ class Voice(commands.Cog):
   @double_check.before_loop
   async def before_double_check(self):
     await self.bot.wait_until_ready()
-
-  async def internal_award(self, recipient: int = 0, amount: int = 0, type: str = "text"):
-    if recipient == 0 or type not in ["text", "voice"]:
-      return
-
-    new_doc = self.users.find_one_and_update(
-      {"_id": recipient},
-      {"$inc": {type: amount}},
-      upsert=True,
-      return_document=ReturnDocument.AFTER
-    )
-
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    self.recent.update_one(
-      {"user": recipient, "date": today},
-      {"$inc": {type: amount}},
-      upsert=True
-    )
-
-    if new_doc:
-      await exp.check(new_doc)
 
   def calculate(self, timedelta: timedelta = None):
     # put whatever calculations you want here!
