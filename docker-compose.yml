@@ -7,5 +7,5 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    ports:
-      - 127.0.0.1:8080:8080 # pass through your reverse proxy of choice
+    ports: # if you don't need the API and don't ever intend to use it, you can get rid of these port-forwarding lines
+      - 127.0.0.1:8080:8080 # pass through your reverse proxy of choice, leave the ":8080" on the very end as-is, it is an internal port that is passed from the python code to the docker container
