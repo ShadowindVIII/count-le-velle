@@ -44,6 +44,7 @@ exp.init(bot, mongo)
 bot.add_cog(Text(bot, mongo))
 bot.add_cog(Voice(bot, mongo))
 bot.add_cog(PublicCommands(bot, mongo))
+bot.add_cot(Admin(bot, mongo))
 if os.environ['API_ENDPOINT'] != "/path/to/your/api":
   bot.add_cog(API(bot, mongo))
 else:
