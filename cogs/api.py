@@ -19,7 +19,6 @@ import asyncio
 from aiohttp import web
 
 API_ENDPOINT = os.environ.get('API_ENDPOINT')
-PORT = os.environ.get('API_PORT')
 
 ADMIN_ROLE_ID = int(os.environ['ADMIN_ROLE_ID'])
 
@@ -42,7 +41,7 @@ class API(commands.Cog):
                     ])
       self.runner = web.AppRunner(app)
       await self.runner.setup()
-      site = web.TCPSite(self.runner, '0.0.0.0', int(PORT))
+      site = web.TCPSite(self.runner, '0.0.0.0', 8080)
       await site.start()
 
   async def get_user(self, request: web.Request) -> web.Response:
@@ -53,7 +52,7 @@ class API(commands.Cog):
     recipient = int(request.match_info["id"])
     doc = self.users.find_one({"_id": recipient})
     if doc:
-      return web.json_response(doc, status=200)
+      return web.json_response(text=json.dumps(doc, default=str), status=200)
     else:
       return web.json_response(status=404)
 

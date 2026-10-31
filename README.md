@@ -44,6 +44,7 @@ This section assumes a prefix command of `!`, change it accordingly. The followi
 - `!award [user_id] [value] <type>` - Adds `value` amount of experience to a person's existing exp. Edits `text` type of experience by default.
 - `!delete [user_id]` - Deletes all data associated with a user, as if they used `/optout` except without assigning them a "No Exp" role.
 - `!transfer [filename]` - Command for doing a one-time bulk write using a JSON from Gaius Play. This is specifically using the file requested from the owner of the bot, and left in in case anybody else is migrating from Gaius. The JSON should be in the root directory where `main.py` sits.
+- `!apikey [create/remove/view/list] <label>` - Create keys with which to access the bot's API. More info in API section
 - - **If you need to transfer a JSON, make sure to un-comment the `COPY` directive sitting in the Dockerfile when you build/run the bot so that the bot has access to it.**
 
 ### Editing Configs
@@ -84,6 +85,22 @@ All 5 parameters are required to define a reward. Because actual newlines will t
 
 The `persistent` option will specify whether you want the role to always remain enabled once a person reaches `threshold`, or whether you want users to be able to remove it with `/wear`.
 
+## API
+This bot has an API cog which will allow (as of writing this) users to interact with the bot via other automated systems beyond itself, if needed. You can send HTTP methods to `http://127.0.0.1:8080/API_ENDPOINT_YOU_CHOOSE` followed by the endpoints described herein. This was developed & implemented so that my team could integrate the [Rain World Server Challenge](https://leapzard.app/rwsc) sheet, since our server's vanity role system has a portion which involves doing in-game challenges and submitting proof to the server, resulting in time being spent on a server-related activity without the usual amount of chatting. As of right now, the `bonus` category of experience is only used when awarded by a staff or awarded through this API. You can handle "bonus" experience however you see fit.
+
+If you do not change the `API_ENDPOINT` specified in the `.env` file and leave it as-is, this cog will not activate. The docker-compose only exposes `127.0.0.1:8080` because I am using a reverse proxy (nginx) which sits in front of the API. It `proxy_pass`es a pretty URL (https://leapzard.app/reginald/api) to the bot so that nginx can handle the rate limits, HTTPS certificates, etc. You can change the docker-compose to expose `8080:8080` if you want it accessible without HTTPS for some reason.
+
+All API endpoints require an `Authorization: Bearer API_KEY_HERE` header. You can generate API keys as an admin with the command `!apikey create key_name_here`. The key will be sent to your DMs, so make sure you have them open. __The key will not be shown to you again and the DM will delete itself after 30 seconds__. The key is not stored in the database, only its hash.
+
+### `/award`
+Sending a `POST` method to this endpoint will look for a JSON object in the form `{"id": "1111111111111111111", "type": "type_of_exp_here", "amount": 1234}` and award it to the user. 
+It returns a status of 200 and a string-ified JSON object with the affected user's latest data if successful.
+It returns a status of 401 if no API key is given or an invalid/nonexistent key is given.
+It returns a status of 400 if the formatting of the JSON object is not given as described above, or if parts of it are missing. An `amount` of 0 will do nothing and simply return the affected user's current experience stats. (Negative amounts are supported and will subtract exp.)
+
+### `/user/{user_id_here}` 
+Sending a `GET` method to this endpoint will return the user's current stats as a JSON object with status 200, if the user has data. If no data is associated with the id given, it returns status 404.
+
 # Database
 Head over to MongoDB's website and look for Atlas. Once you make an account and create an organization, make a New Project, name it, and invite anybody you want to entrust with database access by email. 
 
@@ -119,5 +136,6 @@ It will be slow the first time you do it, and slow if you change/add any depende
 - All Discord bots with >10,000 users able to access it are required to apply for the privileged intents and keep a Privacy Policy publicly available. If you need it, specify it in `PRIVACY_POLICY_URL` so it will appear in `/help` commands.
 - Choose how long you want your commands to be on cooldown via `COMMAND_COOLDOWN`
 - Put your Mongo login URI in `MONGO_TOKEN`
+- If you do not intend to use/expose the bot's API endpoints, leave `API_ENDPOINT` as-is. If it remains as-is, a check will prevent the API from going online at all.
 
 Start up the bot with `docker compose up -d` with your working directory in the bot's root folder, where `main.py` sits.
