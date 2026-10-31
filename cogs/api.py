@@ -83,13 +83,13 @@ class API(commands.Cog):
   @commands.has_any_role(ADMIN_ROLE_ID)
   @commands.guild_only()
   async def apikey(self, ctx: commands.Context, action: str = None, label: str = None):
-    if not label:
+    if not label and action != "list":
       await ctx.send("Invalid command. Please provide a label after providing your action.")
       return
     if action == "create":
       key = secrets.token_urlsafe(32)
       try:
-        await ctx.author.send(f"Your `{label}` API key you generated is: ||{key}||", delete_after=30)
+        await ctx.author.send(f"Your `{label}` API key you generated is: ||`{key}`||", delete_after=30)
       except discord.Forbidden:
         await ctx.send("Please open your DMs so you can receive an API key privately.")
         return
@@ -106,7 +106,7 @@ class API(commands.Cog):
     elif action == "view":
       found = self.api_keys.find_one({"label": label})
       if found:
-        await ctx.send(f"API key `{label}`: created at <t:{int(datetime.fromisoformat(found.get('created')).timestamp())}:F>, SHA256 hash of this key begins with `{found['_id'][0:7]}`. (For security, the original key is neither stored nor recoverable)")
+        await ctx.send(f"API key `{label}` created at <t:{int(datetime.fromisoformat(found.get('created')).timestamp())}:F>, SHA256 hash of this key begins with `{found['_id'][0:7]}`. (For security, the original key is neither stored nor recoverable)")
       else:
         await ctx.send(f"Could not find API key with label `{label}`")
       return
@@ -116,6 +116,6 @@ class API(commands.Cog):
         await ctx.send("No keys have been created yet.")
         return
       result = "\n".join(f"- `{k.get('label')}` (Created <t:{int(datetime.fromisoformat(k.get('created')).timestamp())}:F>): Key hash starts with `{(k.get('_id'))[0:7]}...`" for k in keys)
-      await ctx.send(f"Active keys are:\n```{result}```\n(For security, the original keys are neither stored nor recoverable)")
+      await ctx.send(f"Active keys are:\n{result}\n(For security, the original keys are neither stored nor recoverable)")
     else:
       await ctx.send(f"Invalid command. Formatting is `{self.bot.command_prefix}apikey [create/remove/view] [api key name]` or `{self.bot.command_prefix}apikey list` to view all active keys.")
