@@ -47,6 +47,7 @@ class PublicCommands(commands.Cog):
 3. `{os.environ['PREFIX']}award [user_id] [value] [type]` - Adds `value` to a user's `text` or `voice experience
 4. `{os.environ['PREFIX']}config [view/edit/add] `\`\`\`[parameters]\`\`\` - View/adjust configs. Configs that rarely/never change are located in `.env` on the host machine
 5. `{os.environ['PREFIX']}delete [user_id]` - Delete's a user's records from my database
+6. `{os.environ['PREFIX']}}apikey [create/remove/view/list] [label]` - Manage keys for the bot's API (API is disabled unless you specified an endpoint in `.env`)
 """
     else:
       if os.environ['PRIVACY_POLICY_URL'] != "https://example.com":

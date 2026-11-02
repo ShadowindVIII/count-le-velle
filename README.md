@@ -40,12 +40,13 @@ Please note that this software is presented to the public **as-is, with no guara
 ### Staff-exclusive commands
 
 This section assumes a prefix command of `!`, change it accordingly. The following commands & examples are for staff use only, for adjusting and maintaining people's experience data as needed:
+- `!config` - Edit bot options & apply changes live. Described in more detail in the next subsection.
 - `!set [user_id] [value] <type>` - Set new value for someone's experience, including negatives if you really want. By default the command will edit `text` type of exp if you do not specify.
 - `!award [user_id] [value] <type>` - Adds `value` amount of experience to a person's existing exp. Edits `text` type of experience by default.
 - `!delete [user_id]` - Deletes all data associated with a user, as if they used `/optout` except without assigning them a "No Exp" role.
 - `!transfer [filename]` - Command for doing a one-time bulk write using a JSON from Gaius Play. This is specifically using the file requested from the owner of the bot, and left in in case anybody else is migrating from Gaius. The JSON should be in the root directory where `main.py` sits.
-- `!apikey [create/remove/view/list] <label>` - Create keys with which to access the bot's API. More info in API section
 - - **If you need to transfer a JSON, make sure to un-comment the `COPY` directive sitting in the Dockerfile when you build/run the bot so that the bot has access to it.**
+- `!apikey [create/remove/view/list] <label>` - Create keys with which to access the bot's API. More info in API section
 
 ### Editing Configs
 No role rewards exist in the config by default. By default, the following values will be used for operation:
