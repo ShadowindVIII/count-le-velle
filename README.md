@@ -27,7 +27,7 @@ Please note that this software is presented to the public **as-is, with no guara
 - `/level [user_id]` - leave blank to view your own level/exp
 - `/leaderboard [range] [timespan] [sort_type]` 
 - - Results contain a "Show to everyone" button which users can press to post the results in chat, rather than keeping the results in an ephemeral message
-- - `range`
+- - `range` allows users to view specific areas of the leaderboard besides the default (top 10). Accepts a number or two numbers separated by a hyphen (e.g. `30-50`). Limited to viewing a maximum of 30 records at once, to remain within character limits 
 - - `timespan` allows the user to show Overall leaderboards, or only results from the past 7 ("Weekly") or 30 ("Monthly") days
 - - `sort_type` allows the user to specify whether leaderboards should sort by text only, voice only, both, or view "Around Me" to see where they stand in the leaderboards
 - `/optout` command for those who want to delete all traces of their experience data. Assigns a "No Exp" role if it exists, to prevent future exp gain
