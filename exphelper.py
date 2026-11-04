@@ -22,9 +22,8 @@ async def on_ready():
     
 def update_database():
   global roles, immune_roles, role_info
-  reward_list = config.find({"setting": {"$regex": "^reward_"}})
-  role_info = {doc["setting"][7:] : doc["value"] for doc in reward_list}
-  roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in reward_list]
+  role_info = {doc["setting"][7:] : doc["value"] for doc in config.find({"setting": {"$regex": "^reward_"}})}
+  roles = [(int(role["threshold"]),int(role["role_id"]),role["role_name"],role["message"],role["persistent"]=="True") for role in role_info.values()]
   roles.sort(key=lambda t: t[0])
   immune_roles = config.find_one({"setting": "immune_roles"})["value"]["list"]
     
