@@ -32,7 +32,7 @@ async def check(doc):
   while guild is None:
     await asyncio.sleep(1)
   user = await guild.fetch_member(doc["_id"])
-  total_exp = doc.get("text", 0) + doc.get("voice", 0)
+  total_exp = doc.get("text", 0) + doc.get("voice", 0) + doc.get("bonus", 0)
 
   level = 0
   needed_exp = 100
