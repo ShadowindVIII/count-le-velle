@@ -21,8 +21,10 @@ async def on_ready():
   guild = await bot.fetch_guild(int(os.environ["OPERATING_GUILD"])) 
     
 def update_database():
-  global roles, immune_roles
-  roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in config.find({"setting": {"$regex": "^reward_"}})]
+  global roles, immune_roles, role_info
+  reward_list = config.find({"setting": {"$regex": "^reward_"}})
+  role_info = {doc["setting"][7:] : doc["value"] for doc in reward_list}
+  roles = [(int(doc["value"]["threshold"]),int(doc["value"]["role_id"]),doc["value"]["role_name"],doc["value"]["message"],doc["value"]["persistent"]=="True") for doc in reward_list]
   roles.sort(key=lambda t: t[0])
   immune_roles = config.find_one({"setting": "immune_roles"})["value"]["list"]
     

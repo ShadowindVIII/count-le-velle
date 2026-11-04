@@ -30,7 +30,7 @@ class PublicCommands(commands.Cog):
     self.update_database()
     
   def update_database(self):
-    self.aliases = (self.config.find_one({"setting": "aliases"}))["value"].get("list", set())
+    self.aliases = (self.config.find_one({"setting": "aliases"}))["value"].get("list", dict())
 
   @commands.Cog.listener()
   async def on_ready(self):
@@ -71,29 +71,29 @@ class PublicCommands(commands.Cog):
 
   async def construct_role_list(ctx: discord.AutocompleteContext):
     id = ctx.interaction.user.id
-    current_level = ctx.cog.users.find_one({"_id": id})
+    current_level = exp.users.find_one({"_id": id})
     typed = ctx.value.lower()
-    return [t[2] for t in ctx.cog.roles if t[2].lower().startswith(typed) and not t[4] and current_level.get("level", 0) >= t[0]]
+    return [t[2] for t in exp.roles if t[2].lower().startswith(typed) and not t[4] and current_level.get("level", 0) >= t[0]]
 
   @commands.slash_command(description="Wear a new level role for its icon/color", guild_ids=[GUILD])
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
   async def wear(self, ctx: ApplicationContext,
                  role_name: Option(str, 'Name of the role you would like to equip.', name="role_name", autocomplete=construct_role_list, required=True)):
     await ctx.defer(ephemeral=True)
+    role_name = role_name.casefold()
     if role_name in self.aliases:
       role_name = self.aliases[role_name]
-    role = discord.utils.find(
-      lambda r: r.name.casefold() == role_name.casefold(),
-      self.guild.roles,
-    )
-    match = next((t for t in exp.roles if role and t[1] == role.id), None)
-    if not match:
+    if role_name not in exp.role_info:
       await ctx.followup.send(f"After searching through every role in the server, I am left confused as to what role you mean when you say \"{role_name}\".",
                         ephemeral=True)
       return
+    role_info = exp.role_info[role_name]
+    role = ctx.guild.get_role(role_info["role_id"])
+    if role is None:
+      role = await ctx.guild.fetch_role(role_info["role_id"])
 
     doc = self.users.find_one({"_id": ctx.author.id}) or {}
-    if match[0] > doc.get("level", 0):
+    if role_info["threshold"] > doc.get("level", 0):
       await ctx.followup.send("I have counted every experience point you have, and determined you have not reached the level required for that role.", ephemeral=True)
       return
 
