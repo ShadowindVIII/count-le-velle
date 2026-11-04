@@ -36,7 +36,7 @@ class API(commands.Cog):
     if self.runner is None:
       app = web.Application()
       app.add_routes([
-                      web.post(f"{API_ENDPOINT}/award/", self.award_user),
+                      web.post(f"{API_ENDPOINT}/award", self.award_user),
                       web.get(f"{API_ENDPOINT}/user/{{id:\\d+}}", self.get_user)
                     ])
       self.runner = web.AppRunner(app)
