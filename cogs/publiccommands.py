@@ -27,6 +27,10 @@ class PublicCommands(commands.Cog):
     self.recent = mongo.database.recent
     self.users = mongo.database.users
     self.config = mongo.database.config
+    self.update_database()
+    
+  def update_database(self):
+    self.aliases = (self.config.find_one({"setting": "aliases"}))["value"].get("list", set())
 
   @commands.Cog.listener()
   async def on_ready(self):
@@ -76,6 +80,8 @@ class PublicCommands(commands.Cog):
   async def wear(self, ctx: ApplicationContext,
                  role_name: Option(str, 'Name of the role you would like to equip.', name="role_name", autocomplete=construct_role_list, required=True)):
     await ctx.defer(ephemeral=True)
+    if role_name in self.aliases:
+      role_name = self.aliases[role_name]
     role = discord.utils.find(
       lambda r: r.name.casefold() == role_name.casefold(),
       self.guild.roles,
