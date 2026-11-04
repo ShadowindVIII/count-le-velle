@@ -28,7 +28,7 @@ def update_database():
     
 
 async def check(doc):
-  if guild is None:
+  while guild is None:
     await asyncio.sleep(1)
   user = await guild.fetch_member(doc["_id"])
   total_exp = doc.get("text", 0) + doc.get("voice", 0)
