@@ -8,6 +8,7 @@ import asyncio
 from cogs.admin import Admin
 from cogs.text import Text
 from cogs.voice import Voice
+from cogs.bonus import Bonus
 from cogs.publiccommands import PublicCommands
 from cogs.api import API
 import exphelper as exp
@@ -43,6 +44,7 @@ exp.init(bot, mongo)
 
 bot.add_cog(Text(bot, mongo))
 bot.add_cog(Voice(bot, mongo))
+bot.add_cog(Bonus(bot, mongo))
 bot.add_cog(PublicCommands(bot, mongo))
 bot.add_cog(Admin(bot, mongo))
 if os.environ['API_ENDPOINT'] != "/path/to/your/api":
