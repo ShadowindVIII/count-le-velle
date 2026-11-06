@@ -153,7 +153,7 @@ class Admin(commands.Cog):
         return_document=ReturnDocument.AFTER
       )
 
-    await self.check(new_doc)
+    await exp.check(new_doc, silent = True)
     await ctx.send(content=f"Successfully updated <@{recipient}>'s **{type}** experience to **{amount}**.",allowed_mentions=discord.AllowedMentions.none())
 
   @commands.command()
@@ -186,24 +186,8 @@ class Admin(commands.Cog):
         return_document=ReturnDocument.AFTER
       )
 
-    await self.check(new_doc)
+    await exp.check(new_doc, silent = True)
     await ctx.send(content=f"Successfully added **{amount}** to <@{recipient}>'s **{type}** experience.",allowed_mentions=discord.AllowedMentions.none())
-
-
-  async def check(self, doc):
-    user = await self.guild.fetch_member(doc["_id"])
-    total_exp = doc.get("text", 0) + doc.get("voice", 0)
-
-    level = 0
-    needed_exp = 100
-    while total_exp >= needed_exp:
-      level += 1
-      needed_exp += 5 * level**2 + 50 * level + 100
-    current_level = level
-
-    prev_level = doc.get("level")
-    if prev_level != current_level:
-      self.users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
 
   @commands.command()
   @commands.guild_only()

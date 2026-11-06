@@ -28,7 +28,7 @@ def update_database():
   immune_roles = config.find_one({"setting": "immune_roles"})["value"]["list"]
     
 
-async def check(doc):
+async def check(doc, silent = False):
   while guild is None:
     await asyncio.sleep(1)
   user = await guild.fetch_member(doc["_id"])
@@ -44,7 +44,7 @@ async def check(doc):
   prev_level = doc.get("level")
   if prev_level != current_level:
     users.update_one({"_id": doc["_id"]}, {"$set": {"level": current_level}})
-    if prev_level is not None and current_level > prev_level:
+    if prev_level is not None and current_level > prev_level and not silent:
       try:
         await user.send(f"Congratulations **{user.nick or user.display_name}**, you just advanced to **level {current_level}**!")
       except discord.Forbidden:
