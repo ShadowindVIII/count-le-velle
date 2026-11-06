@@ -26,6 +26,7 @@ class Bonus(commands.Cog):
     self.update_database()
 
   def update_database(self):
+    self.TIME_INCREMENT = int((self.config.find_one({"setting": "time_increment"}))["value"].get("value", 10))
     self.BONUS_AWARD = int(self.config.find_one({"setting": "bonus_award"})["value"].get("value", 375))
     debug = (self.config.find_one({"setting": "debug"}))["value"]
     self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id", 0))]
