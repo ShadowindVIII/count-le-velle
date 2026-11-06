@@ -26,7 +26,7 @@ class Bonus(commands.Cog):
     self.update_database()
 
   def update_database(self):
-    self.BONUS_AWARD = int((self.config.find_one({"setting": "bonus_award"}))["value"].get("value", 375))
+    self.BONUS_AWARD = int((self.config.find_one({"setting": "bonus_award"}))get("value", 375))
     debug = (self.config.find_one({"setting": "debug"}))["value"]
     self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id", 0))]
     self.BONUS_CHANNELS = self.config.find_one({"setting": "bonus_channels"}).get("channels", {})
