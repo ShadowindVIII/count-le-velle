@@ -149,7 +149,7 @@ class PublicCommands(commands.Cog):
 
     current_level = doc.get("level", 0)
     current_exp = doc.get("text", 0) + doc.get("voice", 0) + doc.get("bonus", 0)
-    embed = Embed(title=f'Counting EXP for {user.nick}', color=user.accent_color)
+    embed = Embed(title=f'Counting EXP for {user.nick} or user.display_name', color=user.accent_color)
     embed.add_field(name='Text EXP', value=doc.get("text", 0), inline=True)
     embed.add_field(name='Voice EXP', value=doc.get("voice", 0), inline=True)
     embed.add_field(name='Bonus EXP', value=doc.get("bonus", 0), inline=True)
