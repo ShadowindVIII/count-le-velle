@@ -52,6 +52,14 @@ class Admin(commands.Cog):
   @commands.command()
   @commands.guild_only()
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
+  async def purge(self, ctx: commands.Context):
+    self.recent.delete_many({"_id": {"$type": "string"}})
+    self.users.delete_many({"_id": {"$type": "string"}})
+    await ctx.reply(f"Done!")
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def ping(self, ctx: commands.Context):
     init_text = 'Counting...'
     msg = await ctx.send(init_text)

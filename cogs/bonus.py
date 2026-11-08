@@ -45,7 +45,8 @@ class Bonus(commands.Cog):
       return
     if any(a.id in exp.immune_roles for a in message.author.roles):
       return
-
+    if isinstance(message.type, discord.MessageType.pins_add):
+      return
     # For the Rain World server, BONUS_CHANNELS contains all gallery channels + stories-library
     if message.channel.id not in self.BONUS_CHANNELS.get(str(message.channel.category_id), []):
       return
