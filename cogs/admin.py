@@ -29,6 +29,7 @@ class Admin(commands.Cog):
     self.bot = bot
     self.database = mongo.database
     self.users = mongo.database.users
+    self.recent = mongo.database.recent
     self.start_time = discord.utils.utcnow()
 
   @commands.Cog.listener()
