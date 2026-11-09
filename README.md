@@ -102,6 +102,14 @@ It returns a status of 400 if the formatting of the JSON object is not given as 
 ### `/user/{user_id_here}` 
 Sending a `GET` method to this endpoint will return the user's current stats as a JSON object with status 200, if the user has data. If no data is associated with the id given, it returns status 404.
 
+# Bonus System
+The bonus system is purpose-built for the Rain World server, but most of its code (`cogs/bonus.py`) has been generalized to the point that it can be used anywhere. As it stands, it is currently used to give specific channels of specific categories a set amount of bonus exp with a daily cap on how many times that bonus can be obtained. The config value `bonus_award` takes an integer, `bonus_daily_cap` takes an integer, and `bonus_channels` takes a dictionary of the following form:
+```
+{'category_id_as_a_string': [channel_id_1, channel_id_2], 'second_category_id_here': [channel_id_3, channel_id_4]}
+```
+
+Leaving the bonus configs blank will leave the system inactive. You can also disable the cog entirely by removing the line `bot.add_cog(Bonus(bot, mongo))` in the `main.py` file before building your Docker image. To remove the bonus value that gets displayed in `/level` or `/leaderboard` you will also need to edit `cogs/publiccommands.py` accordingly.
+
 # Database
 Head over to MongoDB's website and look for Atlas. Once you make an account and create an organization, make a New Project, name it, and invite anybody you want to entrust with database access by email. 
 
