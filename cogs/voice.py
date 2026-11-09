@@ -128,4 +128,4 @@ class Voice(commands.Cog):
 
   def calculate(self, timedelta: timedelta = None):
     # put whatever calculations you want here!
-    return (self.VOICE_AWARD * (timedelta.total_seconds() // 60))
+    return (self.VOICE_AWARD * int(timedelta.total_seconds() // 60))

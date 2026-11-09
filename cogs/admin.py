@@ -29,6 +29,7 @@ class Admin(commands.Cog):
     self.bot = bot
     self.database = mongo.database
     self.users = mongo.database.users
+    self.recent = mongo.database.recent
     self.start_time = discord.utils.utcnow()
 
   @commands.Cog.listener()
@@ -48,6 +49,16 @@ class Admin(commands.Cog):
       return
     await channel.send(text, files=files)
     await ctx.message.add_reaction('✅')
+
+  @commands.command()
+  @commands.guild_only()
+  @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
+  async def convert(self, ctx: commands.Context):
+    for doc in self.users.find({"voice": {"$type": "double"}})
+      self.users.update_one({"_id": doc["_id"], {"$set": {"voice": int(doc["voice"])}}})
+    for doc in self.recent.find({"voice": {"$type": "double"}})
+      self.recent.update_one({"_id": doc["_id"], {"$set": {"voice": int(doc["voice"])}}})
+    await ctx.send("Done.")
 
   @commands.command()
   @commands.guild_only()
