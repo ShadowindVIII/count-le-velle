@@ -55,9 +55,9 @@ class Admin(commands.Cog):
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def convert(self, ctx: commands.Context):
     for doc in self.users.find({"voice": {"$type": "double"}}):
-      self.users.update_one({"_id": doc["_id"], {"$set": {"voice": int(doc["voice"])}}})
+      self.users.update_one({"_id": doc["_id"]}, {"$set": {"voice": int(doc["voice"])}})
     for doc in self.recent.find({"voice": {"$type": "double"}}):
-      self.recent.update_one({"_id": doc["_id"], {"$set": {"voice": int(doc["voice"])}}})
+      self.recent.update_one({"_id": doc["_id"]}, {"$set": {"voice": int(doc["voice"])}})
     await ctx.send("Done.")
 
   @commands.command()
