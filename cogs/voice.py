@@ -22,6 +22,8 @@ class Voice(commands.Cog):
     self.recent = mongo.database.recent
     self.config = mongo.database.config
     self.update_database()
+    self.double_check.start()
+    self.remove_old_timestamps.start()
 
   @commands.Cog.listener()
   async def on_ready(self):
@@ -134,6 +136,16 @@ class Voice(commands.Cog):
 
   @double_check.before_loop
   async def before_double_check(self):
+    await self.bot.wait_until_ready()
+
+  @tasks.loop(minutes=60)
+  async def remove_old_timestamps(self):
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=self.VC_WINDOW)
+    self.recent.update_many({"vc_window_start": {"$lte": cutoff}}, {"$unset": {"vc_window_start": "", "vc_window_seconds": ""}})
+
+  @remove_old_timestamps.before_loop
+  async def before_remove_old_timestampd(self):
     await self.bot.wait_until_ready()
 
   def calculate(self, timedelta: timedelta = None):
