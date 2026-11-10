@@ -31,7 +31,7 @@ class OptOut(discord.ui.View):
     if doc:
       text = doc.get("text", 0)
       voice = doc.get("voice", 0)
-      bonus = doc.get("bonus, 0)
+      bonus = doc.get("bonus", 0)
     else:
       text = 0
       voice = 0
