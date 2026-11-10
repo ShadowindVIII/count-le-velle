@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 import os
 import dotenv
+import signal
 
 import exphelper as exp
 
@@ -31,6 +32,8 @@ class Voice(commands.Cog):
         continue
       await self.refresh_channel(channel)
     self.update_database()
+    signal.signal(signal.SIGINT, self.handle_shutdown)
+    signal.signal(signal.SIGTERM, self.handle_shutdown)
 
   def update_database(self):
     self.VOICE_AWARD = int((self.config.find_one({"setting": "voice_award"}))["value"].get("value", 6))
@@ -40,8 +43,15 @@ class Voice(commands.Cog):
     debug = (self.config.find_one({"setting": "debug"}))["value"]
     self.DEBUG = [debug.get("enabled", "True") == "True", int(debug.get("category_id", 0))]
 
-
-
+  async def handle_shutdown(self):
+    print("Shutdown detected, counting up all EXP for users currently in VC...", flush=True)
+    for doc in self.vc.find({}):
+      duration = datetime.now(timezone.utc) - doc["joined"]
+      granted = self.apply_daily_cap(member_id, doc["joined"], duration)
+      if granted > timedelta(0):
+        await exp.internal_award(member_id, self.calculate(timedelta=granted), "voice")
+    print("All users in voice channels have been awarded experience prior to shutdown.", flush=True)
+    os._exit(0)
 
   async def start_segment(self, member_id):
     self.vc.update_one(

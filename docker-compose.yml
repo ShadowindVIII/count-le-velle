@@ -4,6 +4,7 @@ services:
   levelbot:
     container_name: levelbot
     image: levelbot:latest
+    stop_grace_period: 10s
     env_file:
       - .env
     restart: unless-stopped
