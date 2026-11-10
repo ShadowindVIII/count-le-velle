@@ -30,6 +30,7 @@ class Admin(commands.Cog):
     self.database = mongo.database
     self.users = mongo.database.users
     self.recent = mongo.database.recent
+    self.vc = mongo.database.vc
     self.start_time = discord.utils.utcnow()
 
   @commands.Cog.listener()
@@ -118,11 +119,13 @@ class Admin(commands.Cog):
   @commands.guild_only()
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def delete(self, ctx: commands.Context, id: int = 0):
+    self.vc.delete_many({"_id": id})
+    self.recent.delete_many({"user": id})
     doc = self.users.find_one_and_delete({"_id": ctx.author.id})
     if not doc or id == 0:
       await ctx.send('No data associated with <@{id}> / {id}.')
       return
-    await ctx.send(f'Purged data for <@{id}> / {id} ({doc.get("text", 0)} text / {doc.get("voice", 0)}) from database.')
+    await ctx.send(f'Purged data for <@{id}> / {id} ({doc.get("text", 0)} text / {doc.get("voice", 0)} voice / {doc.get("bonus", 0)} bonus) from database.', allowed_mentions=discord.AllowedMentions.none())
 
   @commands.command()
   @commands.guild_only()

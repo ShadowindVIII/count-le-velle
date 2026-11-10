@@ -22,6 +22,7 @@ class OptOut(discord.ui.View):
       await interaction.edit_original_response(content='It seems you have no data associated with your account with which to opt out.', view=None)
       return
 
+    self.cog.vc.delete_one({"_id": self.user.id})
     self.cog.users.delete_one({"_id": self.user.id})
     self.cog.recent.delete_many({"user": self.user.id})
     role = discord.utils.get(interaction.guild.roles, name='No Exp')
@@ -30,11 +31,13 @@ class OptOut(discord.ui.View):
     if doc:
       text = doc.get("text", 0)
       voice = doc.get("voice", 0)
+      bonus = doc.get("bonus, 0)
     else:
       text = 0
       voice = 0
+      bonus = 0
 
-    await interaction.edit_original_response(content=f'You have been opted out and your experience data ({text} text / {voice} voice) has been deleted. To restore it and/or opt back in, contact staff.', view=None)
+    await interaction.edit_original_response(content=f'You have been opted out and your experience data ({text} text / {voice} voice / {bonus} bonus) has been deleted. To restore it and/or opt back in, contact staff.', view=None)
 
   @discord.ui.button(label='Cancel', style=discord.ButtonStyle.secondary)
   async def cancel(self, button, interaction):
