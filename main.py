@@ -21,7 +21,6 @@ intents = discord.Intents()
 intents.message_content = True
 intents.messages = True
 intents.guilds = True
-intents.members = True
 intents.voice_states = True
 
 load_dotenv()
