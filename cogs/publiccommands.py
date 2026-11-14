@@ -38,7 +38,7 @@ class PublicCommands(commands.Cog):
 
   @commands.slash_command(description='Delete all your experience data and opt out from receiving any more', guild_ids=[GUILD])
   async def optout(self, ctx: ApplicationContext):
-    await ctx.respond('Opting out will delete all your experience data. Are you sure you want to do this?', view=OptOutView(self, ctx.author), ephemeral=True)
+    await ctx.respond('Opting out will delete all your experience data. Are you sure you want to do this?', view=OptOut(self, ctx.author), ephemeral=True)
 
 
   @commands.slash_command(description="View the commands I can run", guild_ids=[GUILD])
