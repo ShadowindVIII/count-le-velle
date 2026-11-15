@@ -217,7 +217,7 @@ class PublicCommands(commands.Cog):
       voice = doc.get("voice", 0)
       bonus = doc.get("bonus", 0)
       level = f' Level `{doc.get("level", 0)}`' if timespan == "All Time"  else ""
-      lines.append(f'{rank - (limit // 2) if sort_type == "Around Me" else rank}. <@{doc["_id"]}>{level} - **{text + voice + bonus}** Total (**{text}** Text / **{voice}** VC / **{bonus}** Bonus)')
+      lines.append(f'{rank}. <@{doc["_id"]}>{level} - **{text + voice + bonus}** Total (**{text}** Text / **{voice}** VC / **{bonus}** Bonus)')
 
     embed = Embed(title=f"{timespan} Leaderboard ({sort_type})", description="\n".join(lines) or "No results.", color=0xA9BFBE)
     reveal_button = RevealButton(embed=embed)
@@ -289,7 +289,7 @@ class PublicCommands(commands.Cog):
     ]))
     index = before[0]["n"] if before else 0
     skip = max(0, index - limit // 2)
-    return collection, index + 1, scored + [
+    return collection, skip + 1, scored + [
       {"$sort": {"total_exp": -1, "_id": 1}},
       {"$skip": skip},
       {"$limit": limit},
