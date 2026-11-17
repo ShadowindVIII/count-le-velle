@@ -41,8 +41,6 @@ class Bonus(commands.Cog):
       return
     if message.author.bot:
       return
-    if message.content.startswith(self.bot.command_prefix):
-      return
     if any(a.id in exp.immune_roles for a in message.author.roles):
       return
     if message.type == discord.MessageType.pins_add:

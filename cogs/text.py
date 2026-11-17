@@ -46,10 +46,6 @@ class Text(commands.Cog):
       return
     if isinstance(message.channel, discord.VoiceChannel):
      return
-    if message.content.startswith(self.bot.command_prefix):
-      return
-    if len(message.content) < 2 and not message.attachments:
-      return
     if any(a.id in exp.immune_roles for a in message.author.roles):
       return
 
