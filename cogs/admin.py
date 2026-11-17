@@ -23,6 +23,7 @@ import exphelper as exp
 
 ADMIN_ROLE_ID = int(os.environ["ADMIN_ROLE_ID"])
 STAFF_ROLE_ID = int(os.environ["STAFF_ROLE_ID"])
+GUILD = int(os.environ['OPERATING_GUILD'])
 
 class Admin(commands.Cog):
   def __init__(self, bot, mongo: MongoClient):
@@ -37,18 +38,10 @@ class Admin(commands.Cog):
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"]))
 
-  @commands.slash_command()
-  @commands.guild_only()
+  @commands.slash_command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def speak(self, ctx: commands.Context, channel: TextChannel|VoiceChannel|StageChannel|Thread, *, text: str = None):
-    files = []
-    if ctx.message.attachments is not None:
-      for attachment in ctx.message.attachments:
-        file = await attachment.to_file()
-        files.append(file)
-    if files == [] and text is None:
-      return
-    await channel.send(text, files=files)
+  async def speak(self, ctx: commands.ApplicationContext, channel: TextChannel|VoiceChannel|StageChannel|Thread, text: str = None):
+    await channel.send(text)
     await ctx.respond(content='✅', ephemeral=True)
 
   @commands.command()
