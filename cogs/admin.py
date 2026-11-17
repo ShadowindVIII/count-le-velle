@@ -40,7 +40,7 @@ class Admin(commands.Cog):
 
   @commands.slash_command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def speak(self, ctx: commands.ApplicationContext, channel: TextChannel|VoiceChannel|StageChannel|Thread, text: str = None):
+  async def speak(self, ctx: ApplicationContext, channel: TextChannel|VoiceChannel|StageChannel|Thread, text: str = None):
     await channel.send(text)
     await ctx.respond(content='✅', ephemeral=True)
 
