@@ -37,7 +37,7 @@ class Admin(commands.Cog):
   async def on_ready(self):
     self.guild = await self.bot.fetch_guild(int(os.environ["OPERATING_GUILD"]))
 
-  @commands.command()
+  @commands.slash_command()
   @commands.guild_only()
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def speak(self, ctx: commands.Context, channel: TextChannel|VoiceChannel|StageChannel|Thread, *, text: str = None):
@@ -49,7 +49,7 @@ class Admin(commands.Cog):
     if files == [] and text is None:
       return
     await channel.send(text, files=files)
-    await ctx.message.add_reaction('✅')
+    await ctx.respond(content='✅', ephemeral=True)
 
   @commands.command()
   @commands.guild_only()
