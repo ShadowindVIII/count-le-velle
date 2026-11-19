@@ -53,12 +53,13 @@ class Bonus(commands.Cog):
     if not doc:
       return
 
+    now = datetime.now(timezone.utc)
+    date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
     bonuses = (self.recent.find_one({"user": message.author.id, "date": date}) or {}).get("bonuses", {})
     if int(bonuses.get(str(message.channel.category.id),0)) >= self.BONUS_DAILY_CAP:
       return
 
-    now = datetime.now(timezone.utc)
-    date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     self.recent.update_one(
       {"user": message.author.id, "date": date},
       {"$inc": {f"bonuses.{message.channel.category.id}": -1}},
