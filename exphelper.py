@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 import os
 import asyncio
 
+guild = None
+
 def init(inputBot, mongo: MongoClient):
   global config, bot, users, recent
   config = mongo.database.config
