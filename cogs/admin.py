@@ -96,7 +96,7 @@ class Admin(commands.Cog):
 
   @commands.command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def set(self, ctx: ApplicationContext, recipient: int = 0, amount: int = 0, type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"]), default="Text"):
+  async def set(self, ctx: ApplicationContext, recipient: int = 0, amount: int = 0, type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"])) = "Text":
     if recipient == 0:
       return
     doc = self.users.find_one({"_id": recipient})
@@ -128,7 +128,7 @@ class Admin(commands.Cog):
 
   @commands.slash_command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def award(self, ctx: ApplicationContext, recipient: int = 0, amount: int = 0, type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"]), default="Text"):
+  async def award(self, ctx: ApplicationContext, recipient: int = 0, amount: int = 0, type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"])) = "Text":
     await ctx.response.defer()
     if recipient == 0:
       return
