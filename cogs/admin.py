@@ -84,7 +84,7 @@ class Admin(commands.Cog):
 
   @commands.command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def delete(self, ctx: ApplicationContext, id: int = 0):
+  async def delete(self, ctx: ApplicationContext, id: Option(int, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0)):
     await ctx.response.defer()
     self.vc.delete_many({"_id": id})
     self.recent.delete_many({"user": id})
@@ -96,7 +96,10 @@ class Admin(commands.Cog):
 
   @commands.command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def set(self, ctx: ApplicationContext, recipient: int = 0, amount: int = 0, type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"]) = "Text"):
+  async def set_exp(self, ctx: ApplicationContext, 
+                    recipient: Option(int, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0), 
+                    amount: Option(int, "New value to set someone's experience to", name="amount", required=True, default=0), 
+                    type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"], default="Text")):
     if recipient == 0:
       return
     doc = self.users.find_one({"_id": recipient})
@@ -128,7 +131,10 @@ class Admin(commands.Cog):
 
   @commands.slash_command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
-  async def award(self, ctx: ApplicationContext, recipient: int = 0, amount: int = 0, type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"]) = "Text"):
+  async def award(self, ctx: ApplicationContext, 
+                    recipient: Option(int, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0),
+                    amount: Option(int, "New value to set someone's experience to", name="amount", required=True, default=0),
+                    type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"], default="Text")):
     await ctx.response.defer()
     if recipient == 0:
       return
