@@ -20,7 +20,7 @@ import asyncio
 from aiohttp import web
 
 API_ENDPOINT = os.environ.get('API_ENDPOINT')
-
+GUILD = int(os.environ['OPERATING_GUILD'])
 ADMIN_ROLE_ID = int(os.environ['ADMIN_ROLE_ID'])
 
 class API(commands.Cog):
@@ -79,9 +79,8 @@ class API(commands.Cog):
     else:
       return web.json_response({"error": "invalid experience type"}, status=400)
 
-  @commands.command()
+  @commands.slash_command(description="Make/manage API keys.", guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID)
-  @commands.guild_only()
   async def apikey(self, ctx: commands.Context, action: str = None, label: str = None):
     if not label and action != "list":
       await ctx.send("Invalid command. Please provide a label after providing your action.")
