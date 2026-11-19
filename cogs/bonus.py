@@ -34,6 +34,40 @@ class Bonus(commands.Cog):
     self.BONUS_DAILY_CAP = int(self.config.find_one({"setting": "bonus_daily_cap"})["value"].get("value", 3))
 
   @commands.Cog.listener()
+  async def on_message_delete(self, message):
+    if message.guild is None:
+      return
+    if self.DEBUG[0] and not (message.channel.category_id == self.DEBUG[1]):
+      return
+    if message.author.bot:
+      return
+    if any(a.id in exp.immune_roles for a in message.author.roles):
+      return
+    if message.type == discord.MessageType.pins_add:
+      return
+    # For the Rain World server, BONUS_CHANNELS contains all gallery channels + stories-library
+    if message.channel.id not in self.BONUS_CHANNELS.get(str(message.channel.category_id), []):
+      return
+
+    doc = self.users.find_one({"_id": message.author.id})
+    if not doc:
+      return
+
+    bonuses = (self.recent.find_one({"user": message.author.id, "date": date}) or {}).get("bonuses", {})
+    if int(bonuses.get(str(message.channel.category.id),0)) >= self.BONUS_DAILY_CAP:
+      return
+
+    now = datetime.now(timezone.utc)
+    date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    self.recent.update_one(
+      {"user": message.author.id, "date": date},
+      {"$inc": {f"bonuses.{message.channel.category.id}": -1}},
+      upsert=True
+    )
+
+    await exp.internal_award(recipient=message.author.id, amount=(-1 * self.calculate(message)), type="bonus")
+
+  @commands.Cog.listener()
   async def on_message(self, message):
     if message.guild is None:
       return
