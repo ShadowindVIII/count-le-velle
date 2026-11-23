@@ -107,7 +107,7 @@ class PublicCommands(commands.Cog):
     if role not in ctx.author.roles:
       await ctx.author.add_roles(role)
 
-    current_level = exp.users.find_one({"_id": id})
+    current_level = exp.users.find_one({"_id": ctx.author.id})
     persistent_roles = [t for t in exp.roles if current_level >= t[0] and t[4]]
     for tuple in persistent_roles:
       role = guild.get_role(tuple[1])
@@ -115,8 +115,8 @@ class PublicCommands(commands.Cog):
         role = await guild.fetch_role(tuple[1])
       if not role:
         continue
-      if role not in user.roles:
-        await user.add_roles(role)
+      if role not in ctx.author.roles:
+        await ctx.author.add_roles(role)
 
     await ctx.followup.send("You are hereby awarded the role you seek.", ephemeral=True)
     self.users.update_one(
