@@ -180,7 +180,6 @@ class Admin(commands.Cog):
 
     await ctx.response.defer()
     collection = self.database.config
-    attachment = ctx.message.attachments[0] if ctx.message.attachments else None
     action = action.lower()
 
     if action not in ["edit", "add", "remove", "view", "refresh"]:
