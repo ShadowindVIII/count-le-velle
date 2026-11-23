@@ -8,7 +8,7 @@ Setup information can be found at the bottom of this README, starting at the Dat
 
 MongoDB is chosen for the database because it already stores data in an encrypted format, both at-rest as well as in-transit, because it is required by Discord's Developer TOS. Docker is chosen as it creates a virtual environment so your `.env` file is not easily accessible by other softwares that might be running on your host machine, and so that any dependencies (most notably, the lack thereof) get handled by Docker.
 
-Please note that this software is presented to the public **as-is, with no guarantees or assurances if separate functionality or different functionality is desired**. I will try my best to explain the systems herein to allow the bot to work as-is, but I am still a human.
+Please note that this software is presented to the public **as-is, with no guarantees or assurances if separate functionality or different functionality is desired**. I will try my best to explain the systems herein to allow the bot to work as-is, but I am still a human. If you have any questions, feel free to reach out to me on Discord, my username is `@shadowindviii`
 
 # Experience System
 
