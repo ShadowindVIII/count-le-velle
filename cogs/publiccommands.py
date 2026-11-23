@@ -109,9 +109,9 @@ class PublicCommands(commands.Cog):
 
     persistent_roles = [t for t in exp.roles if doc.get("level", 0) >= t[0] and t[4]]
     for tuple in persistent_roles:
-      role = guild.get_role(tuple[1])
+      role = ctx.guild.get_role(tuple[1])
       if not role:
-        role = await guild.fetch_role(tuple[1])
+        role = await ctx.guild.fetch_role(tuple[1])
       if not role:
         continue
       if role not in ctx.author.roles:
