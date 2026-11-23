@@ -77,6 +77,11 @@ async def check(doc, silent = False):
       except discord.Forbidden:
         pass
 
+  persistent_roles = [t for t in roles if current_level >= t[0] and t[4]]
+  for role in persistent_roles:
+    if role not in user.roles:
+      await user.add_roles(role)
+
 def exp_for_level(n: int = 0):
   if n <= 0:
     return 0

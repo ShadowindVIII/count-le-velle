@@ -62,7 +62,7 @@ class PublicCommands(commands.Cog):
 1. `/help` - Displays this message. For any staff reading this, please see `!help staff` if you need staff commands
 2. `/level [user_id]` - See someone's current level/experience counts. Leave `[user_id]` blank to see your own
 3. `/restore` - Restore your level roles, if you had any and lost them
-4. `/wear [role name]` - Select a specific role/icon you want to display. Limited to 3 uses per hour
+4. `/wear [role_name]` - Select a specific role/icon you want to display
 5. `/leaderboard [range]` - Displays the top `range` people on the leaderboard. Can also specify e.g. `25-75`
 6. `/optout` - Opt out of the leveling system and deletes your EXP data. Contact staff to opt in again or restore levels{privacy}
 """
@@ -106,6 +106,11 @@ class PublicCommands(commands.Cog):
       await ctx.author.remove_roles(*to_remove)
     if role not in ctx.author.roles:
       await ctx.author.add_roles(role)
+
+    persistent_roles = [t for t in exp.roles if current_level >= t[0] and t[4]]
+    for role in persistent_roles:
+      if role not in user.roles:
+        await user.add_roles(role)
 
     await ctx.followup.send("You are hereby awarded the role you seek.", ephemeral=True)
     self.users.update_one(
