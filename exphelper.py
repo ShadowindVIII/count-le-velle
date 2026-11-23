@@ -78,7 +78,12 @@ async def check(doc, silent = False):
         pass
 
   persistent_roles = [t for t in roles if current_level >= t[0] and t[4]]
-  for role in persistent_roles:
+  for tuple in persistent_roles:
+    role = guild.get_role(tuple[1])
+    if not role:
+      role = await guild.fetch_role(tuple[1])
+    if not role:
+      continue
     if role not in user.roles:
       await user.add_roles(role)
 
