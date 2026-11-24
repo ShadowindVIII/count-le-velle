@@ -107,6 +107,13 @@ class PublicCommands(commands.Cog):
     if role not in ctx.author.roles:
       await ctx.author.add_roles(role)
 
+    await ctx.followup.send("You are hereby awarded the role you seek.", ephemeral=True)
+    self.users.update_one(
+      {"_id": ctx.author.id},
+      {"$set": {"preference": role.id}},
+      upsert=True,
+    )
+
     persistent_roles = [t for t in exp.roles if doc.get("level", 0) >= t[0] and t[4]]
     for tuple in persistent_roles:
       role = ctx.guild.get_role(tuple[1])
@@ -116,13 +123,6 @@ class PublicCommands(commands.Cog):
         continue
       if role not in ctx.author.roles:
         await ctx.author.add_roles(role)
-
-    await ctx.followup.send("You are hereby awarded the role you seek.", ephemeral=True)
-    self.users.update_one(
-      {"_id": ctx.author.id},
-      {"$set": {"preference": role.id}},
-      upsert=True,
-    )
 
   @commands.slash_command(description='Restore your level roles/permissions.', guild_ids=[GUILD])
   @commands.cooldown(1, COMMAND_COOLDOWN, commands.BucketType.member)
