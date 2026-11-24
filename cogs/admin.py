@@ -136,13 +136,14 @@ class Admin(commands.Cog):
   @commands.slash_command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def award(self, ctx: ApplicationContext, 
-                  recipient: Option(int, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0),
+                  recipient: Option(str, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0),
                   amount: Option(int, "New value to set someone's experience to", name="amount", required=True, default=0),
                   type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"], default="Text")
                   ):
     await ctx.response.defer()
     if recipient == 0:
       return
+    recipient = int(recipient)
     doc = self.users.find_one({"_id": recipient})
 
     if type == "text":
