@@ -123,6 +123,8 @@ class Voice(commands.Cog):
 # this is just here in the small chance that the bot misses an API event related to VCs for any reason
   @tasks.loop(minutes=10)
   async def double_check(self):
+    while self.guild is None:
+      await asyncio.sleep(1)
     active = set()
     for channel in self.guild.voice_channels:
       if self.DEBUG[0] and channel.category_id != self.DEBUG[1]:
