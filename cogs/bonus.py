@@ -65,8 +65,8 @@ class Bonus(commands.Cog):
       {"$inc": {f"bonuses.{message.channel.category.id}": -1}},
       upsert=True
     )
-
-    await exp.internal_award(recipient=message.author.id, amount=(-1 * self.calculate(message)), type="bonus")
+    if doc.get("bonus",0) - self.calculate(message) >= 0:
+      await exp.internal_award(recipient=message.author.id, amount=(-1 * self.calculate(message)), type="bonus")
 
   @commands.Cog.listener()
   async def on_message(self, message):

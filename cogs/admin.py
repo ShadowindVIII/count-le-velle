@@ -87,9 +87,10 @@ class Admin(commands.Cog):
   @commands.command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def delete(self, ctx: ApplicationContext, 
-                   id: Option(int, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0)
+                   id: Option(str, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0)
                    ):
     await ctx.response.defer()
+    recipient = int(recipient)
     self.vc.delete_many({"_id": id})
     self.recent.delete_many({"user": id})
     doc = self.users.find_one_and_delete({"_id": ctx.author.id})
@@ -101,11 +102,12 @@ class Admin(commands.Cog):
   @commands.command(guild_ids=[GUILD])
   @commands.has_any_role(ADMIN_ROLE_ID, STAFF_ROLE_ID)
   async def set_exp(self, ctx: ApplicationContext, 
-                    recipient: Option(int, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0), 
+                    recipient: Option(str, "ID of the user whose experience you'd like to edit", name="member_id", required=True, default=0), 
                     amount: Option(int, "New value to set someone's experience to", name="amount", required=True, default=0), 
                     type: Option(str, "Type of exp you'd like to award", name="type", required=True, choies=["Text", "Voice", "Bonus"], default="Text")):
     if recipient == 0:
       return
+    recipient = int(recipient)
     doc = self.users.find_one({"_id": recipient})
 
     if type == "Text":
